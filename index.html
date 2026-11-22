@@ -138,8 +138,8 @@ if("speechSynthesis" in window)window.speechSynthesis.getVoices();
 function letterCue(i){return "האות "+LETTER_SOUNDS[i];}
 function sayLetter(i){say(letterCue(i));}
 function learnExamples(i){const L=LETTERS[i];return [[L[2],L[3]],...(EXTRA_EXAMPLES[L[0]]||[])];}
-function sayLetterAndWord(i,cb){const L=LETTERS[i];say(letterCue(i),()=>say(L[4]==="end"?"בסוף המילה "+L[2]:"בתחילת המילה "+L[2],cb));}
-function sayLearnExample(i,word,cb){const L=LETTERS[i];say(letterCue(i),()=>say(L[4]==="end"?"בסוף המילה "+word:word,cb));}
+function sayLetterAndWord(i,cb){const L=LETTERS[i],where=L[4]==="end"?"בסוף המילה ":"בתחילת המילה ";say(letterCue(i)+". "+where+L[2],cb);}
+function sayLearnExample(i,word,cb){const L=LETTERS[i],where=L[4]==="end"?"בסוף המילה ":"כמו ב";say(letterCue(i)+". "+where+word,cb);}
 
 const PRAISE=["כל הכבוד! 🌟","מדהים! 🎉","וואו, נהדר! ⭐","בדיוק ככה! 💪","את אלופה! 🏆","מושלם! 🌈","יש! עוד כוכב! ✨"];
 const TRY_AGAIN=["כמעט! נסי שוב 💪","עוד פעם, את יכולה! 🌸","לא נורא, ננסה שוב 😊"];
