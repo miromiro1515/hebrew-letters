@@ -12,7 +12,6 @@
   header{text-align:center;padding:10px 6px 4px;}
   header h1{font-size:2.2rem;margin:0 0 2px;color:var(--purple);}
   .stars-line{font-size:1.4rem;margin:4px 0;}
-  .switch{background:none;border:none;color:#a39bc9;font-size:.85rem;cursor:pointer;font-family:inherit;text-decoration:underline;}
   .stage{margin-top:8px;}
   .card{background:var(--card);border-radius:26px;box-shadow:0 8px 24px rgba(139,92,246,.14);padding:22px 16px;margin:0 0 16px;text-align:center;}
   .phase-title{font-size:1.9rem;font-weight:800;color:var(--pink);margin:6px 0 2px;}
@@ -41,7 +40,6 @@
   .done-emoji{font-size:4rem;text-align:center;}
   .confetti{position:fixed;pointer-events:none;font-size:1.6rem;z-index:50;animation:fall 1.4s ease-in forwards;}
   @keyframes fall{0%{transform:translateY(-10px) rotate(0);opacity:1;}100%{transform:translateY(70vh) rotate(320deg);opacity:0;}}
-  .name-input{font-family:inherit;font-size:1.3rem;text-align:center;padding:12px 16px;border-radius:16px;border:2px solid #d9d0f7;width:80%;}
   footer{margin-top:22px;text-align:center;}
   details{background:var(--card);border-radius:18px;padding:12px 16px;text-align:right;box-shadow:0 4px 14px rgba(139,92,246,.10);margin-top:10px;}
   summary{cursor:pointer;font-weight:700;color:var(--purple);}
@@ -57,7 +55,6 @@
   <header>
     <h1 id="greet">🌟 האותיות שלי 🌟</h1>
     <div class="stars-line" id="starsLine"></div>
-    <button class="switch hidden" id="switchKid">לא את/ה? החלפת ילד/ה</button>
   </header>
   <main class="stage" id="stage"></main>
   <footer>
@@ -90,6 +87,7 @@ const LETTERS = [
 ["ך","כף סופית","מלך","👑","end"],["ם","מם סופית","ים","🌊","end"],["ן","נון סופית","גן","🌷","end"],
 ["ף","פא סופית","כף","🥄","end"],["ץ","צדי סופית","עץ","🌳","end"]
 ];
+const LETTER_SOUNDS=["אַ","בַּ","גְּ","דָּ","הַ","וֶ","זֶ","חַ","טִ","יֶ","כַּ","לֵ","מַ","נָ","סוּ","עֵ","פִ","צַ","קוֹ","רַ","שֶׁ","תַּ","כְ","מִ","נִ","פְ","צְ"];
 const STARTER_COUNT=4, NEW_PER_DAY=2, WARM_Q=4, FINAL_OLD_Q=3;
 const KEY="hebrewLettersV1";
 function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
@@ -97,7 +95,7 @@ function loadAll(){try{return JSON.parse(localStorage.getItem(KEY))||{profiles:{
 function saveAll(){try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){}}
 let DB=loadAll();
 function rangeArr(a,b){const r=[];for(let i=a;i<b;i++)r.push(i);return r;}
-function newProfile(name){return {name:name,learned:STARTER_COUNT,day:todayStr(),stars:0,session:{phase:"learn"},introducedToday:rangeArr(0,STARTER_COUNT)};}
+function newProfile(){return {name:"",learned:STARTER_COUNT,day:todayStr(),stars:0,session:{phase:"learn"},introducedToday:rangeArr(0,STARTER_COUNT)};}
 function rollover(p){
   if(p.day!==todayStr()){
     const before=p.learned;
@@ -127,8 +125,8 @@ function say(text,onend){
   window.speechSynthesis.speak(u);
 }
 if("speechSynthesis" in window)window.speechSynthesis.getVoices();
-function sayLetter(i){const L=LETTERS[i];say(L[1].replace(" סופית"," סופית"));}
-function sayLetterAndWord(i,cb){const L=LETTERS[i];say(L[1],()=>say(L[4]==="end"?"בסוף המילה "+L[2]:"כמו ב"+L[2],cb));}
+function sayLetter(i){say(LETTER_SOUNDS[i]);}
+function sayLetterAndWord(i,cb){const L=LETTERS[i];say(LETTER_SOUNDS[i],()=>say(L[4]==="end"?"בסוף המילה "+L[2]:"בתחילת המילה "+L[2],cb));}
 
 const PRAISE=["כל הכבוד! 🌟","מדהים! 🎉","וואו, נהדר! ⭐","בדיוק ככה! 💪","את אלופה! 🏆","מושלם! 🌈","יש! עוד כוכב! ✨"];
 const TRY_AGAIN=["כמעט! נסי שוב 💪","עוד פעם, את יכולה! 🌸","לא נורא, ננסה שוב 😊"];
@@ -143,31 +141,15 @@ function currentProfile(){return DB.current?DB.profiles[DB.current]:null;}
 
 function renderHeader(){
   const p=currentProfile();
-  document.getElementById("greet").textContent=p?"שלום "+p.name+"! 🌷":"🌟 האותיות שלי 🌟";
+  document.getElementById("greet").textContent="🌟 האותיות שלי 🌟";
   document.getElementById("starsLine").textContent=p?"⭐ "+p.stars+" כוכבים · "+p.learned+" אותיות":"";
-  ["switchKid","lettersDetails","parentDetails"].forEach(id=>document.getElementById(id).classList.toggle("hidden",!p));
+  ["lettersDetails","parentDetails"].forEach(id=>document.getElementById(id).classList.toggle("hidden",!p));
   const box=document.getElementById("allLetters");box.innerHTML="";
   if(p)LETTERS.forEach((L,i)=>{const c=el("span","chip"+(i<p.learned?"":" locked"),L[0]);if(i<p.learned)c.onclick=()=>sayLetter(i);box.appendChild(c);});
 }
 
-function showNameScreen(){
-  renderHeader();stage.innerHTML="";
-  const c=el("div","card");
-  c.appendChild(el("div","phase-title","מי משחקת היום? 🦄"));
-  c.appendChild(el("div","phase-sub","כתבי את השם כדי שנזכור את ההתקדמות"));
-  const inp=el("input","name-input");inp.placeholder="השם שלי...";inp.maxLength=20;c.appendChild(inp);
-  const row=el("div","btn-row");const go=el("button","big btn-next","בואי נתחיל! 🚀");
-  const start=()=>{const name=inp.value.trim();if(!name){inp.focus();return;}if(!DB.profiles[name])DB.profiles[name]=newProfile(name);DB.current=name;saveAll();startSession();};
-  go.onclick=start;inp.onkeydown=e=>{if(e.key==="Enter")start();};
-  row.appendChild(go);c.appendChild(row);
-  const names=Object.keys(DB.profiles);
-  if(names.length){c.appendChild(el("div","phase-sub","או המשיכי עם:"));const r2=el("div","btn-row");
-    names.forEach(n=>{const b=el("button","big btn-hear",n);b.onclick=()=>{DB.current=n;saveAll();startSession();};r2.appendChild(b);});c.appendChild(r2);}
-  stage.appendChild(c);inp.focus();
-}
-
 function startSession(){
-  const p=currentProfile();if(!p){showNameScreen();return;}
+  const p=currentProfile();if(!p){DB.current="child";DB.profiles[DB.current]=newProfile();saveAll();startSession();return;}
   rollover(p);renderHeader();
   const ph=p.session.phase;
   if(ph==="warm")runWarmup(p);else if(ph==="learn")runLearn(p,0);else if(ph==="final")runFinal(p);else showDone(p);
@@ -217,7 +199,7 @@ function showDone(p){
   stage.innerHTML="";renderHeader();
   const c=el("div","card");
   c.appendChild(el("div","done-emoji","🏆"));
-  c.appendChild(el("div","phase-title","כל הכבוד, "+p.name+"!"));
+  c.appendChild(el("div","phase-title","כל הכבוד!"));
   c.appendChild(el("div","phase-sub","סיימת את התרגול של היום. מחר יחכו לך אותיות חדשות! 🌈"));
   const row=el("div","btn-row");const free=el("button","big btn-hear","🎲 תרגול חופשי");
   free.onclick=()=>{const ids=shuffle(rangeArr(0,p.learned)).slice(0,Math.min(8,p.learned));quizFlow(p,ids,{title:"🎲 תרגול חופשי",sub:"סתם בשביל הכיף",onDone:()=>showDone(p)});};
@@ -247,7 +229,7 @@ function quizFlow(p,items,opts){
     let promptSay;
     if(kind==="find"){
       c.appendChild(el("div","letter-name","איפה האות "+L[1]+"?"));
-      promptSay=()=>say("איפה האות "+L[1]+"?");
+      promptSay=()=>say("איפה הצליל "+LETTER_SOUNDS[i]+"?");
     }else if(kind==="pic"){
       c.appendChild(el("div","prompt-emoji",L[3]));
       c.appendChild(el("div","letter-name",L[4]==="end"?"באיזו אות נגמרת המילה "+L[2]+"?":"באיזו אות מתחילה המילה "+L[2]+"?"));
@@ -256,7 +238,7 @@ function quizFlow(p,items,opts){
       c.appendChild(el("div","big-letter",L[0]));
       c.appendChild(el("div","letter-name",L[1]));
       c.appendChild(el("div","phase-sub",L[4]==="end"?"איזו מילה נגמרת באות הזאת?":"איזו מילה מתחילה באות הזאת?"));
-      promptSay=()=>say(L[1]+". "+(L[4]==="end"?"איזו מילה נגמרת באות הזאת?":"איזו מילה מתחילה באות הזאת?"));
+      promptSay=()=>say(LETTER_SOUNDS[i]+". "+(L[4]==="end"?"איזו מילה נגמרת באות הזאת?":"איזו מילה מתחילה באות הזאת?"));
     }
     const grid=el("div","opts");
     const choices=shuffle([i].concat(ds));
@@ -269,10 +251,10 @@ function quizFlow(p,items,opts){
         if(ci===i){
           answered=true;b.classList.add("right");fb.textContent=praise();fb.className="feedback good";confetti();
           if(mistakes===0||true){p.stars++;saveAll();renderHeader();}
-          say(L[1]+(kind==="match"?". "+L[2]:""),()=>{setTimeout(()=>{qi++;mistakes=0;next();},300);});
+          say(LETTER_SOUNDS[i]+(kind==="match"?". "+L[2]:""),()=>{setTimeout(()=>{qi++;mistakes=0;next();},300);});
         }else{
           mistakes++;b.classList.add("wrong");fb.textContent=tryMsg();fb.className="feedback try";
-          say(kind==="match"?M[2]:M[1]);
+          say(kind==="match"?M[2]:LETTER_SOUNDS[ci]);
         }
       };
       grid.appendChild(b);
@@ -286,7 +268,6 @@ function quizFlow(p,items,opts){
   next();
 }
 
-document.getElementById("switchKid").onclick=()=>{DB.current=null;saveAll();showNameScreen();};
 document.getElementById("addOne").onclick=()=>{
   const p=currentProfile();if(!p)return;
   if(p.learned>=LETTERS.length){alert("כל האותיות כבר נלמדו 🎉");return;}
@@ -294,10 +275,16 @@ document.getElementById("addOne").onclick=()=>{
 };
 document.getElementById("resetKid").onclick=()=>{
   const p=currentProfile();if(!p)return;
-  if(confirm("להתחיל מחדש את "+p.name+"?")){DB.profiles[p.name]=newProfile(p.name);saveAll();startSession();}
+  if(confirm("להתחיל מחדש?")){DB.profiles[DB.current]=newProfile();saveAll();startSession();}
 };
 
-if(DB.current&&DB.profiles[DB.current])startSession();else showNameScreen();
+if(!DB.current||!DB.profiles[DB.current]){
+ const saved=Object.keys(DB.profiles);
+ DB.current=saved[0]||"child";
+ if(!DB.profiles[DB.current])DB.profiles[DB.current]=newProfile();
+ saveAll();
+}
+startSession();
 </script>
 </body>
 </html>
