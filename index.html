@@ -363,6 +363,7 @@ function wordStep(p,w,pos){
   c.appendChild(el("div","progress-pips",chars.map((_,k)=>k<pos?"🟣":(k===pos?"🟡":"⚪")).join(" ")));
   c.appendChild(el("div","phase-title","🧩 בונים מילה"));
   c.appendChild(el("div","phase-sub","שומעים את המילה ובונים אותה אות אות, בלי להציץ!"));
+  c.appendChild(el("div","prompt-emoji",WORDS[w][1]));
   const tiles=el("div","tiles");
   chars.forEach((ch,k)=>tiles.appendChild(el("span","tile"+(k<pos?"":" hidden-l"),k<pos?ch:"?")));
   c.appendChild(tiles);
@@ -433,4 +434,4 @@ if(!DB.current||!DB.profiles[DB.current]){
 startSession();
 </script>
 </body>
-</html>
+                 </html>
