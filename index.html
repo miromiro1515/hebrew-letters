@@ -88,6 +88,16 @@ const LETTERS = [
 ["ף","פא סופית","כף","🥄","end"],["ץ","צדי סופית","עץ","🌳","end"]
 ];
 const LETTER_SOUNDS=["אַ","בַּ","גְּ","דָּ","הַ","וֶ","זֶ","חַ","טִ","יֶ","כַּ","לֵ","מַ","נָ","סוּ","עֵ","פִ","צַ","קוֹ","רַ","שֶׁ","תַּ","כְ","מִ","נִ","פְ","צְ"];
+const EXTRA_EXAMPLES={
+  "א":[["אבא","👨"],["אוטו","🚗"]],"ב":[["בית","🏠"],["בובה","🪆"]],"ג":[["גמל","🐪"],["גינה","🌷"]],"ד":[["דלת","🚪"],["דובי","🧸"]],
+  "ה":[["היפופוטם","🦛"],["הליקופטר","🚁"]],"ו":[["וילון","🪟"],["וופל","🧇"]],"ז":[["זית","🫒"],["זבוב","🪰"]],"ח":[["חלה","🍞"],["חלון","🪟"]],
+  "ט":[["טבעת","💍"],["טווס","🦚"]],"י":[["יונה","🕊️"],["ירח","🌙"]],"כ":[["כובע","🧢"],["כלב","🐶"]],"ל":[["לימון","🍋"],["ליצן","🤡"]],
+  "מ":[["מטרייה","☂️"],["מלון","🍈"]],"נ":[["נר","🕯️"],["נעל","👟"]],"ס":[["סל","🧺"],["סבון","🧼"]],"ע":[["ענן","☁️"],["עוגה","🍰"]],
+  "פ":[["פרח","🌸"],["פיצה","🍕"]],"צ":[["ציפור","🐦"],["צפרדע","🐸"]],"ק":[["קשת","🌈"],["קובייה","🎲"]],"ר":[["רגל","🦵"],["רימון","🍎"]],
+  "ש":[["שעון","⌚"],["שוקולד","🍫"]],"ת":[["תות","🍓"],["תינוק","👶"]],"ך":[["נסיך","🤴"],["כריך","🥪"]],"ם":[["חלום","💤"],["שלום","🕊️"]],
+  "ן":[["ענן","☁️"],["שעון","🕰️"]],"ף":[["אף","👃"],["גוף","🧍"]],"ץ":[["ארץ","🌍"],["קיץ","☀️"]]
+};
+
 const STARTER_COUNT=4, NEW_PER_DAY=2, WARM_Q=4, FINAL_OLD_Q=3;
 const KEY="hebrewLettersV1";
 function todayStr(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
@@ -127,7 +137,9 @@ function say(text,onend){
 if("speechSynthesis" in window)window.speechSynthesis.getVoices();
 function letterCue(i){return "האות "+LETTER_SOUNDS[i];}
 function sayLetter(i){say(letterCue(i));}
+function learnExamples(i){const L=LETTERS[i];return [[L[2],L[3]],...(EXTRA_EXAMPLES[L[0]]||[])];}
 function sayLetterAndWord(i,cb){const L=LETTERS[i];say(letterCue(i),()=>say(L[4]==="end"?"בסוף המילה "+L[2]:"בתחילת המילה "+L[2],cb));}
+function sayLearnExample(i,word,cb){const L=LETTERS[i];say(letterCue(i),()=>say(L[4]==="end"?"בסוף המילה "+word:word,cb));}
 
 const PRAISE=["כל הכבוד! 🌟","מדהים! 🎉","וואו, נהדר! ⭐","בדיוק ככה! 💪","את אלופה! 🏆","מושלם! 🌈","יש! עוד כוכב! ✨"];
 const TRY_AGAIN=["כמעט! נסי שוב 💪","עוד פעם, את יכולה! 🌸","לא נורא, ננסה שוב 😊"];
@@ -166,25 +178,27 @@ function runWarmup(p){
   quizFlow(p,qs,{title:"🔁 חזרה קטנה",sub:"קודם נזכר באותיות שכבר למדנו",onDone:after});
 }
 
-function runLearn(p,k){
+function runLearn(p,k,j=0){
   const ids=p.introducedToday;
   if(k>=ids.length){setPhase(p,"final");runFinal(p);return;}
-  const i=ids[k],L=LETTERS[i];
+  const i=ids[k],L=LETTERS[i],examples=learnExamples(i),example=examples[j];
   stage.innerHTML="";
   const c=el("div","card");
   c.appendChild(el("div","progress-pips",ids.map((_,j)=>j<k?"🟣":(j===k?"🟡":"⚪")).join(" ")));
   c.appendChild(el("div","phase-title","🌷 בואי נכיר ("+(k+1)+"/"+ids.length+")"));
   c.appendChild(el("div","big-letter",L[0]));
   c.appendChild(el("div","letter-name",L[1]));
-  c.appendChild(el("div","prompt-emoji",L[3]));
-  c.appendChild(el("div","example",(L[4]==="end"?"בסוף המילה ":"כמו ב")+"<b>"+L[2]+"</b>"));
+  c.appendChild(el("div","prompt-emoji",example[1]));
+  c.appendChild(el("div","example",(L[4]==="end"?"בסוף המילה ":"כמו ב")+"<b>"+example[0]+"</b>"));
+  c.appendChild(el("div","phase-sub","דוגמה "+(j+1)+" מתוך "+examples.length));
   const row=el("div","btn-row");
-  const hear=el("button","big btn-hear","🔊 שמעי");hear.onclick=()=>sayLetterAndWord(i);row.appendChild(hear);
-  const nx=el("button","big btn-next",k+1<ids.length?"הבאה ⬅️":"לחזרה! 🎯");
-  nx.onclick=()=>{p.stars++;saveAll();renderHeader();runLearn(p,k+1);};
+  const hear=el("button","big btn-hear","🔊 שמעי שוב");hear.onclick=()=>sayLearnExample(i,example[0]);row.appendChild(hear);
+  const nextLabel=j+1<examples.length?"עוד מילה":k+1<ids.length?"הבאה ⬅️":"לחזרה! 🎯";
+  const nx=el("button","big btn-next",nextLabel);
+  nx.onclick=()=>{if(j+1<examples.length){runLearn(p,k,j+1);return;}p.stars++;saveAll();renderHeader();runLearn(p,k+1,0);};
   row.appendChild(nx);c.appendChild(row);
   stage.appendChild(c);
-  sayLetterAndWord(i);
+  sayLearnExample(i,example[0]);
 }
 
 function runFinal(p){
