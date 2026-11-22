@@ -125,8 +125,9 @@ function say(text,onend){
   window.speechSynthesis.speak(u);
 }
 if("speechSynthesis" in window)window.speechSynthesis.getVoices();
-function sayLetter(i){say(LETTER_SOUNDS[i]);}
-function sayLetterAndWord(i,cb){const L=LETTERS[i];say(LETTER_SOUNDS[i],()=>say(L[4]==="end"?"בסוף המילה "+L[2]:"בתחילת המילה "+L[2],cb));}
+function letterCue(i){return "האות "+LETTER_SOUNDS[i];}
+function sayLetter(i){say(letterCue(i));}
+function sayLetterAndWord(i,cb){const L=LETTERS[i];say(letterCue(i),()=>say(L[4]==="end"?"בסוף המילה "+L[2]:"בתחילת המילה "+L[2],cb));}
 
 const PRAISE=["כל הכבוד! 🌟","מדהים! 🎉","וואו, נהדר! ⭐","בדיוק ככה! 💪","את אלופה! 🏆","מושלם! 🌈","יש! עוד כוכב! ✨"];
 const TRY_AGAIN=["כמעט! נסי שוב 💪","עוד פעם, את יכולה! 🌸","לא נורא, ננסה שוב 😊"];
@@ -229,7 +230,7 @@ function quizFlow(p,items,opts){
     let promptSay;
     if(kind==="find"){
       c.appendChild(el("div","letter-name","איפה האות "+L[1]+"?"));
-      promptSay=()=>say("איפה הצליל "+LETTER_SOUNDS[i]+"?");
+      promptSay=()=>say("איפה הצליל של "+letterCue(i)+"?");
     }else if(kind==="pic"){
       c.appendChild(el("div","prompt-emoji",L[3]));
       c.appendChild(el("div","letter-name",L[4]==="end"?"באיזו אות נגמרת המילה "+L[2]+"?":"באיזו אות מתחילה המילה "+L[2]+"?"));
@@ -238,7 +239,7 @@ function quizFlow(p,items,opts){
       c.appendChild(el("div","big-letter",L[0]));
       c.appendChild(el("div","letter-name",L[1]));
       c.appendChild(el("div","phase-sub",L[4]==="end"?"איזו מילה נגמרת באות הזאת?":"איזו מילה מתחילה באות הזאת?"));
-      promptSay=()=>say(LETTER_SOUNDS[i]+". "+(L[4]==="end"?"איזו מילה נגמרת באות הזאת?":"איזו מילה מתחילה באות הזאת?"));
+      promptSay=()=>say(letterCue(i)+". "+(L[4]==="end"?"איזו מילה נגמרת באות הזאת?":"איזו מילה מתחילה באות הזאת?"));
     }
     const grid=el("div","opts");
     const choices=shuffle([i].concat(ds));
@@ -251,10 +252,10 @@ function quizFlow(p,items,opts){
         if(ci===i){
           answered=true;b.classList.add("right");fb.textContent=praise();fb.className="feedback good";confetti();
           if(mistakes===0||true){p.stars++;saveAll();renderHeader();}
-          say(LETTER_SOUNDS[i]+(kind==="match"?". "+L[2]:""),()=>{setTimeout(()=>{qi++;mistakes=0;next();},300);});
+          say(letterCue(i)+(kind==="match"?". "+L[2]:""),()=>{setTimeout(()=>{qi++;mistakes=0;next();},300);});
         }else{
           mistakes++;b.classList.add("wrong");fb.textContent=tryMsg();fb.className="feedback try";
-          say(kind==="match"?M[2]:LETTER_SOUNDS[ci]);
+          say(kind==="match"?M[2]:letterCue(ci));
         }
       };
       grid.appendChild(b);
