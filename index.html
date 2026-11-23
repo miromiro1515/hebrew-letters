@@ -766,7 +766,6 @@ p.stars++;saveAll();renderHeader();confetti();
 c.innerHTML="";
 c.appendChild(el("div","phase-title","כל הכבוד!"));
 c.appendChild(el("div","puzzle-hint","הגעת לאות "+LETTERS[li][0]+", האות שפותחת את המילה "+WORDS[w][0]+"!"));
-const dog=document.createElement("img");dog.className="puzzle-reward";dog.src=PUZZLE_DOG;dog.alt="הכלבה מעודדת אותך";c.appendChild(dog);
 const row=el("div","btn-row"),more=el("button","big btn-next","עוד מבוך");more.onclick=()=>runMaze(p);row.appendChild(more);c.appendChild(row);
 sayLetterWithText(li,"כל הכבוד! פתרת את המבוך!");
 }
@@ -799,4 +798,4 @@ saveAll();
 startSession();
 </script>
 </body>
-</html>
+                 </html>
