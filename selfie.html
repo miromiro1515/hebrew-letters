@@ -28,6 +28,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 #status{min-height:22px;text-align:center;font-size:15px;font-weight:bold;color:#2a7a5a;margin:4px 0}
 .note{font-size:14px;color:#6a5d86}
 [hidden]{display:none!important}
+#shot:not([hidden]){display:flex!important}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;animation:fl .35s ease-out}@keyframes fl{0%{opacity:.85}100%{opacity:0}}
 </style></head><body>
 <div class="lp-back-bar"><a class="lp-back" href="learning.html" aria-label="חזרה לבחירת מקצוע"><span class="lp-back-arrow" aria-hidden="true">←</span><span class="lp-back-text">חזרה לבחירת מקצוע</span></a></div>
 <main>
@@ -41,12 +43,14 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <section id="play" hidden>
 <div class="stage" id="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas></div>
 <div id="status" aria-live="polite"></div>
+<div class="row"><button id="snap2" class="big" style="background:linear-gradient(135deg,#ff9f43,#ff5d8f);color:#fff">צילום</button></div><p class="note" style="text-align:center">אפשר גם ללחוץ על התמונה כדי לצלם.</p>
 <p class="lbl">כובעים</p><div class="row" id="hats"></div>
 <p class="lbl">משקפיים</p><div class="row" id="glasses"></div>
 <p class="lbl">עוד</p><div class="row" id="extra"></div>
-<div class="row"><button id="flip">מצלמה אחרת</button><button id="snap">צילום</button><button id="stop">סגירת מצלמה</button></div>
-<p class="note" style="text-align:center">צילום נשמר במכשיר שלך בלבד.</p>
+<div class="row"><button id="flip">מצלמה קדמית / אחורית</button><button id="stop">סגירת מצלמה</button></div>
+<p class="note" style="text-align:center">התמונה נשארת במכשיר שלך בלבד.</p>
 </section>
+<div id="shot" hidden style="position:fixed;inset:0;z-index:100;background:#000b;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:14px"><img id="shotimg" alt="התמונה שצולמה" style="max-width:100%;max-height:68dvh;border-radius:16px;border:4px solid #fff"><div class="row"><button id="shotsave" class="big" style="background:#3ed598;color:#0b3d2a">שמירה</button><button id="shotagain" class="big">צילום נוסף</button></div><p id="shotmsg" style="color:#fff;font-weight:bold;margin:0;min-height:22px" aria-live="polite"></p></div>
 </main>
 <script type="module">
 const $=id=>document.getElementById(id);
@@ -88,7 +92,7 @@ function computeFace(res,w,h){
  const L=res.faceLandmarks&&res.faceLandmarks[0];if(!L)return null;
  /* video is shown with object-fit:cover, so map video coords to canvas coords */
  const vw=vid.videoWidth,vh=vid.videoHeight,sc=Math.max(w/vw,h/vh),ox=(w-vw*sc)/2,oy=(h-vh*sc)/2;
- const mir=facing==='user';const P=i=>({x:mir?w-(L[i].x*vw*sc+ox):L[i].x*vw*sc+ox,y:L[i].y*vh*sc+oy});
+ const mir=mirror;const P=i=>({x:mir?w-(L[i].x*vw*sc+ox):L[i].x*vw*sc+ox,y:L[i].y*vh*sc+oy});
  const eL=P(263),eR=P(33),top=P(10),chin=P(152),cl=P(454),cr=P(234),nose=P(1),mouth=P(13);
  const eyeC={x:(eL.x+eR.x)/2,y:(eL.y+eR.y)/2};
  const [ea,eb]=eL.x<eR.x?[eL,eR]:[eR,eL];const roll=Math.atan2(eb.y-ea.y,eb.x-ea.x);
@@ -197,33 +201,67 @@ function loop(){
  else if(trackState==='failed'){f=manualFace(w,h)}
  if(f)drawAll(f);
 }
-async function openCam(){
+let mirror=true;
+async function getStream(mode){
+ const base={width:{ideal:640},height:{ideal:480}};
+ try{return await navigator.mediaDevices.getUserMedia({video:{...base,facingMode:{exact:mode}},audio:false})}
+ catch(e){if(e&&(e.name==='NotAllowedError'||e.name==='SecurityError'))throw e;return await navigator.mediaDevices.getUserMedia({video:{...base,facingMode:{ideal:mode}},audio:false})}
+}
+function stopStream(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;vid.srcObject=null}
+async function openCam(wanted){
  $('err').textContent='';
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('err').textContent='הדפדפן הזה לא מאפשר מצלמה. אפשר לנסות ב-Safari או ב-Chrome עדכניים.';return}
+ const prev=facing;wanted=wanted||facing;
+ stopStream();face=null;smooth=null;
  try{
-  if(stream)stream.getTracks().forEach(t=>t.stop());
-  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:640},height:{ideal:480}},audio:false});
-  vid.srcObject=stream;await vid.play().catch(()=>{});
-  vid.style.transform=facing==='user'?'scaleX(-1)':'scaleX(1)';
-  $('intro').hidden=true;$('play').hidden=false;smooth=null;face=null;
-  loadTracker();if(!raf)loop();
+  stream=await getStream(wanted);
  }catch(e){
   const n=e&&e.name;
-  $('err').textContent=(n==='NotAllowedError'||n==='SecurityError')?'לא אישרנו גישה למצלמה. אפשר לאשר בהגדרות הדפדפן ולנסות שוב.':(n==='NotFoundError'?'לא נמצאה מצלמה במכשיר.':'לא הצלחנו לפתוח את המצלמה.');
+  if(!$('play').hidden){ /* switching failed: go back to the camera that worked */
+   status('המצלמה האחרת לא נפתחה. חוזרים למצלמה הקודמת.');
+   try{stream=await getStream(prev);wanted=prev}catch(e2){stream=null}
+  }
+  if(!stream){
+   $('play').hidden=true;$('intro').hidden=false;
+   $('err').textContent=(n==='NotAllowedError'||n==='SecurityError')?'לא אישרנו גישה למצלמה. אפשר לאשר בהגדרות הדפדפן ולנסות שוב.':(n==='NotFoundError'?'לא נמצאה מצלמה במכשיר.':'לא הצלחנו לפתוח את המצלמה. אפשר ללחוץ שוב על הכפתור.');
+   return;
+  }
  }
+ facing=wanted;
+ /* trust what the browser says about the camera it really opened */
+ let real=null;try{real=stream.getVideoTracks()[0].getSettings().facingMode}catch(e){}
+ if(real==='user'||real==='environment')facing=real;
+ mirror=facing==='user';
+ vid.srcObject=stream;await vid.play().catch(()=>{});
+ vid.style.transform=mirror?'scaleX(-1)':'scaleX(1)';
+ $('intro').hidden=true;$('play').hidden=false;lastTs=-1;
+ loadTracker();if(!raf)loop();
 }
-function closeCam(){
- if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;vid.srcObject=null;cancelAnimationFrame(raf);raf=0;
- $('play').hidden=true;$('intro').hidden=false;
-}
-$('start').addEventListener('click',openCam);
+function closeCam(){stopStream();cancelAnimationFrame(raf);raf=0;$('play').hidden=true;$('intro').hidden=false}
+$('start').addEventListener('click',()=>{facing='user';openCam('user')});
 $('stop').addEventListener('click',closeCam);
-$('flip').addEventListener('click',()=>{facing=facing==='user'?'environment':'user';openCam()});
+let flipping=false;$('flip').addEventListener('click',async()=>{if(flipping)return;flipping=true;$('flip').disabled=true;try{await openCam(facing==='user'?'environment':'user')}finally{flipping=false;$('flip').disabled=false}});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream)closeCam()});
 window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop())});
-$('snap').addEventListener('click',()=>{
+let lastBlob=null;
+function takePhoto(){
+ if(!stream||vid.readyState<2)return;
  const w=cv.width,h=cv.height,o=document.createElement('canvas');o.width=w;o.height=h;const c=o.getContext('2d');
- const vw=vid.videoWidth,vh=vid.videoHeight,sc=Math.max(w/vw,h/vh);c.save();if(facing==='user'){c.translate(w,0);c.scale(-1,1)}c.drawImage(vid,(w-vw*sc)/2,(h-vh*sc)/2,vw*sc,vh*sc);c.restore();c.drawImage(cv,0,0);
- o.toBlob(b=>{if(!b)return;const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='סלפי.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);status('התמונה נשמרה במכשיר')},'image/png');
+ const vw=vid.videoWidth,vh=vid.videoHeight,sc=Math.max(w/vw,h/vh);c.save();if(mirror){c.translate(w,0);c.scale(-1,1)}c.drawImage(vid,(w-vw*sc)/2,(h-vh*sc)/2,vw*sc,vh*sc);c.restore();c.drawImage(cv,0,0);
+ const fl=document.createElement('div');fl.className='flash';$('stage').appendChild(fl);setTimeout(()=>fl.remove(),400);
+ o.toBlob(b=>{if(!b){status('לא הצלחנו לצלם');return}
+  lastBlob=b;if($('shotimg').dataset.u)URL.revokeObjectURL($('shotimg').dataset.u);const u=URL.createObjectURL(b);$('shotimg').dataset.u=u;$('shotimg').src=u;$('shotmsg').textContent='';$('shot').hidden=false;$('shotsave').focus();
+ },'image/png');
+}
+$('snap2').addEventListener('click',takePhoto);
+/* tap on the picture takes a photo (only when face tracking is working, so manual dragging still works) */
+let tapStart=null;
+cv.addEventListener('pointerdown',e=>{tapStart={x:e.clientX,y:e.clientY,t:Date.now()}});
+cv.addEventListener('pointerup',e=>{if(!tapStart)return;const m=Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y),d=Date.now()-tapStart.t;tapStart=null;if(landmarker&&m<10&&d<500)takePhoto()});
+$('shotagain').addEventListener('click',()=>{$('shot').hidden=true});
+$('shotsave').addEventListener('click',async()=>{
+ if(!lastBlob)return;const file=new File([lastBlob],'selfie.png',{type:'image/png'});
+ try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:'סלפי'});$('shotmsg').textContent='נשלח לשיתוף מהמכשיר';return}}catch(e){if(e&&e.name==='AbortError')return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(lastBlob);a.download='selfie.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);$('shotmsg').textContent='התמונה נשמרה במכשיר';
 });
 </script></body></html>
