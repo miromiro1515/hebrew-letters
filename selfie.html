@@ -42,7 +42,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 </section>
 <section id="play" hidden>
 <div class="stage" id="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas></div>
-<div id="status" aria-live="polite"></div>
+<div id="status" aria-live="polite"></div><div id="diag" style="text-align:center;font-size:12px;color:#7a6c96;direction:ltr;min-height:16px"></div>
 <div class="row"><button id="snap2" class="big" style="background:linear-gradient(135deg,#ff9f43,#ff5d8f);color:#fff">צילום</button></div><p class="note" style="text-align:center">אפשר גם ללחוץ על התמונה כדי לצלם.</p>
 <p class="lbl">כובעים</p><div class="row" id="hats"></div>
 <p class="lbl">שיער</p><div class="row" id="hair"></div><div class="row" id="hairc" aria-label="צבע שיער"></div>
@@ -79,7 +79,7 @@ async function loadTracker(){
   const m=await withTO(import(base+'/vision_bundle.mjs'),20000,'import');
   const fs=await withTO(m.FilesetResolver.forVisionTasks(base+'/wasm'),20000,'wasm');
   const opts=d=>({baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',delegate:d},runningMode:'VIDEO',numFaces:1});
-  try{landmarker=await withTO(m.FaceLandmarker.createFromOptions(fs,opts('GPU')),12000,'gpu')}catch(e){landmarker=await withTO(m.FaceLandmarker.createFromOptions(fs,opts('CPU')),25000,'cpu')}
+  window.__mp={m,fs,opts};try{landmarker=await withTO(m.FaceLandmarker.createFromOptions(fs,opts('GPU')),12000,'gpu');delegateUsed='GPU'}catch(e){landmarker=await withTO(m.FaceLandmarker.createFromOptions(fs,opts('CPU')),25000,'cpu');delegateUsed='CPU'}
   trackState='ready';status('');
  }catch(e){landmarker=null;trackState='failed';status('הזיהוי האוטומטי לא נטען. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}
 }
@@ -224,23 +224,26 @@ function drawAll(f){
  drawGlasses(f);drawHat(f);
 }
 function resize(){const r=cv.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);const w=Math.round(r.width*d),h=Math.round(r.height*d);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}}
-let detErr=0,noFace=0;
+let detErr=0,noFace=0,delegateUsed='-',rawFaces=0,lastDet=0,detCalls=0,retriedCpu=false;
+async function retryCpu(){if(retriedCpu||!window.__mp)return;retriedCpu=true;try{const{m,fs,opts}=window.__mp;const n=await withTO(m.FaceLandmarker.createFromOptions(fs,opts('CPU')),25000,'cpu2');const old=landmarker;landmarker=n;delegateUsed='CPU';noFace=0;try{old&&old.close&&old.close()}catch(_){}}catch(e){}}
 function loop(){
  raf=requestAnimationFrame(loop);
  if(!stream||vid.readyState<2)return;
  resize();const w=cv.width,h=cv.height;ctx.clearRect(0,0,w,h);
  let f=null;
- if(landmarker&&vid.currentTime!==lastTs){
-  lastTs=vid.currentTime;
-  try{const res=landmarker.detectForVideo(vid,performance.now());face=computeFace(res,w,h);detErr=0}catch(e){face=null;if(++detErr>8){landmarker=null;trackState='failed';status('הזיהוי האוטומטי לא עובד בטלפון הזה. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}}
+ if(landmarker&&performance.now()-lastDet>45){
+  lastDet=performance.now();detCalls++;
+  try{const res=landmarker.detectForVideo(vid,performance.now());rawFaces=(res.faceLandmarks||[]).length;face=computeFace(res,w,h);detErr=0}catch(e){face=null;if(++detErr>8){landmarker=null;trackState='failed';status('הזיהוי האוטומטי לא עובד בטלפון הזה. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}}
  }
  if(landmarker){f=smoothFace(face);
   if(f){noFace=0;status('')}
   else{if(!noFace)noFace=performance.now();
+   if(delegateUsed==='GPU'&&performance.now()-noFace>6000)retryCpu();
    if(performance.now()-noFace>3000){f=manualFace(w,h);status('לא רואים פנים. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}
    else status('מחפשים פנים... מסתכלים למצלמה')}}
  else if(trackState==='failed'){f=manualFace(w,h)}
  else if(trackState==='loading'){f=manualFace(w,h);status('טוענים זיהוי פנים... בינתיים אפשר לגרור את הקישוטים עם האצבע.')}
+ {const dg=$('diag');if(dg)dg.textContent=(landmarker||trackState!=='idle')?('detector: '+(landmarker?delegateUsed:trackState)+' | faces: '+rawFaces+' | video '+vid.videoWidth+'x'+vid.videoHeight+' | calls '+detCalls):''}
  if(f)drawAll(f);
 }
 let mirror=true;
@@ -298,7 +301,7 @@ function takePhoto(){
 $('snap2').addEventListener('click',takePhoto);
 /* tap on the picture takes a photo (a short single tap only; dragging or pinching never captures) */
 let tapStart=null,multi=false,down=new Set();
-cv.addEventListener('pointerdown',e=>{down.add(e.pointerId);if(down.size>1)multi=true;if(down.size===1){multi=false;tapStart={x:e.clientX,y:e.clientY,t:Date.now(),moved:false}}});
+cv.addEventListener('pointerdown',e=>{if(e.isPrimary){down.clear();down.add(e.pointerId);multi=false;tapStart={x:e.clientX,y:e.clientY,t:Date.now(),moved:false}}else{down.add(e.pointerId);multi=true}});
 cv.addEventListener('pointermove',e=>{if(tapStart&&Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y)>=12)tapStart.moved=true});
 cv.addEventListener('pointercancel',e=>{down.delete(e.pointerId);tapStart=null});
 cv.addEventListener('pointerup',e=>{down.delete(e.pointerId);if(!tapStart)return;const t=tapStart;tapStart=null;if(multi||t.moved||Date.now()-t.t>600)return;if(Math.hypot(e.clientX-t.x,e.clientY-t.y)>=12)return;takePhoto()});
