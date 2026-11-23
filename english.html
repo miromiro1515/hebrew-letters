@@ -98,7 +98,7 @@
 .lp-back-arrow{font-size:1.9rem;line-height:1;font-weight:700}
 .lp-back-text{direction:rtl}
 </style>
-</head>
+<link rel="stylesheet" href="theme.css"></head>
 <body>
 <div class="lp-back-bar"><a class="lp-back" href="learning.html" aria-label="חזרה לבחירת מקצוע"><span class="lp-back-arrow" aria-hidden="true">←</span><span class="lp-back-text">חזרה לבחירת מקצוע</span></a></div>
 <div class="wrap">
@@ -548,7 +548,7 @@ function runLearn(p,k){
   ok.onclick=()=>{
     fb.textContent=praise();
     fb.className="feedback good";
-    celebrate(fb); p.stars++; saveAll(); renderHeader();
+    celebrate(fb); window.lpCelebrate&&lpCelebrate({speak:false}); p.stars++; saveAll(); renderHeader();
     advanceAfterSuccess();
   };
   okRow.appendChild(ok); c.appendChild(okRow);
@@ -683,7 +683,7 @@ function quizFlow(p, items, opts){
           answered=true;
           b.classList.add("right");
           fb.textContent=praise(); fb.className="feedback good";
-          celebrate(fb); p.stars++; saveAll(); renderHeader();
+          celebrate(fb); window.lpCelebrate&&lpCelebrate({speak:false}); p.stars++; saveAll(); renderHeader();
           optsBox.querySelectorAll(".opt").forEach(o=>o.style.pointerEvents="none");
           qi++;
           scheduleAdvance(next);
@@ -760,5 +760,5 @@ document.getElementById("harder").onclick=()=>changeDifficulty(1);
 else showNameScreen();
 </script>
   <div id="visits" style="display:flex;justify-content:center;margin-top:12px;opacity:.75;"><img src="https://visitor-badge.laobi.icu/badge?page_id=miromiro1515.english-words&amp;left_text=%D7%91%D7%99%D7%A7%D7%95%D7%A8%D7%99%D7%9D" alt="מספר הביקורים" loading="lazy" onerror="this.parentNode.style.display='none'"></div></div>
-</body>
+<script src="celebrate.js"></script></body>
 </html>
