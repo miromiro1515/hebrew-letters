@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>מי לא שייך?</title><style>
+.lp-back-bar{direction:ltr;display:flex;justify-content:flex-start;padding:10px 12px 0}
+.lp-back{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:8px 18px 8px 12px;border-radius:999px;background:#fff;color:#5b3fd0;border:2px solid #d9d0fb;box-shadow:0 3px 10px rgba(91,63,208,.18);font:700 1.05rem/1.2 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.lp-back:active{transform:scale(.97)}
+.lp-back-arrow{font-size:1.9rem;line-height:1;font-weight:700}
+.lp-back-text{direction:rtl}
+</style><style>
+:root{font-family:Arial,sans-serif;color:#302647;background:#f4f0fb}*{box-sizing:border-box}body{margin:0;padding:0 12px 12px;background:linear-gradient(150deg,#faf3df,#e8f5ff);min-height:100dvh}main{max-width:540px;margin:auto}header{text-align:center;margin:2px 0 12px}h1{font-size:25px;margin:4px 0 2px}.sub{margin:0;font-size:16px;color:#67567f}button{font:inherit;touch-action:manipulation}button{cursor:pointer;min-height:46px;border:0;border-radius:13px;font-weight:bold;padding:10px 14px;color:#44325f;background:#eee7fa}button:focus-visible,a:focus-visible{outline:3px solid #8c5ed2;outline-offset:3px}button:disabled{opacity:.45;cursor:default}.card{background:white;border-radius:22px;padding:18px 16px;box-shadow:0 5px 22px #56417b12;text-align:center}.topline{display:flex;align-items:center;justify-content:space-between;font-size:14px;color:#67567f}.track{height:7px;background:#ede8f5;border-radius:8px;overflow:hidden;margin:10px 0 14px}.track span{display:block;background:#8b5ac9;height:100%;transition:width .2s}.prompt{font-size:20px;font-weight:bold;margin:0 0 14px;line-height:1.5}.pics{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pics button{background:#f7f4fc;border:3px solid #ebe4f6;border-radius:20px;min-height:104px;font-size:52px;line-height:1.15;padding:10px 6px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.pics button small{font-size:16px;font-weight:bold;color:#5d4c78}.pics button.wrong{border-color:#d58232;background:#fff1df;opacity:.55}.pics button.right{border-color:#269c70;background:#e2f7ec}.feedback{min-height:40px;margin:12px 0 5px;line-height:1.45;font-weight:bold;color:#226f54;font-size:18px}.feedback.retry{color:#9b5c16}.hint{font-size:16px;line-height:1.5;background:#fff7e5;padding:10px;border-radius:12px;margin-top:8px}.hint:empty{display:none}.tools{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:8px}.tools button{font-size:15px;min-height:44px;background:#f5f1fa}.primary{background:#7950b9!important;color:white!important;min-width:150px}.difficulty{display:flex;gap:8px;margin-top:14px}.difficulty button{flex:1;background:white;border:1px solid #d8cbe9;font-size:16px}.level{text-align:center;font-size:13px;color:#79698d;margin:7px 0}.celebrate{font-size:72px;color:#269c70;margin:8px auto}.finish h2{font-size:26px}.finish p{font-size:18px;line-height:1.5}footer{text-align:center;font-size:12px;line-height:1.5;color:#7d718a;margin:18px 0 4px}[hidden]{display:none!important}@media(max-width:350px){body{padding:0 9px 9px}.card{padding:14px 12px}.pics button{min-height:92px;font-size:44px}.pics button small{font-size:15px}h1{font-size:22px}}
+</style></head><body><div class="lp-back-bar"><a class="lp-back" href="learning.html" aria-label="חזרה לבחירת מקצוע"><span class="lp-back-arrow" aria-hidden="true">←</span><span class="lp-back-text">חזרה לבחירת מקצוע</span></a></div><main><header><h1>מי לא שייך?</h1><p class="sub">מצאו את התמונה שהיא יוצאת דופן</p></header><section id="exercise" class="card"><div class="topline"><span id="progress"></span><span id="stars"></span></div><div class="track"><span id="bar"></span></div><p class="prompt">איזו תמונה לא שייכת לשלוש האחרות?</p><div id="pics" class="pics"></div><div id="feedback" class="feedback" aria-live="polite"></div><div id="hint" class="hint" aria-live="polite"></div><div class="tools"><button id="hear">להקריא</button><button id="next" class="primary" hidden>לתמונות הבאות</button></div></section><section id="finish" class="card finish" hidden><h2>כל הכבוד!</h2><div class="celebrate" aria-hidden="true">✓</div><p id="summary"></p><button id="again" class="primary">עוד סיבוב קצר</button></section><div class="difficulty"><button id="easier">קשה מדי</button><button id="harder">קל מדי</button></div><p id="level" class="level"></p><footer>משחק חשיבה קצר, לא מבחן.<br>הרמה וההצלחות נשמרות רק בדפדפן הזה. <span id="visits"></span></footer></main><script>
+'use strict';
+const KEY='kids_odd_one_out_v1', $=id=>document.getElementById(id), TOTAL=8;
+function it(e,n){return{e,n}}
+const LEVELS=[
+ {label:'קל מאוד',sets:[
+  {cat:'פירות',why:'כל השלושה פירות, והכלב הוא חיה',same:[it('🍎','תפוח'),it('🍌','בננה'),it('🍇','ענבים')],odd:it('🐶','כלב')},
+  {cat:'חיות',why:'כולן חיות, והמכונית היא לא חיה',same:[it('🐱','חתול'),it('🐶','כלב'),it('🐰','ארנב')],odd:it('🚗','מכונית')},
+  {cat:'בגדים',why:'כולם בגדים, והפיצה היא אוכל',same:[it('👕','חולצה'),it('👖','מכנסיים'),it('🧦','גרב')],odd:it('🍕','פיצה')},
+  {cat:'ירקות',why:'כולם ירקות, והמטוס הוא כלי תחבורה',same:[it('🥕','גזר'),it('🥦','ברוקולי'),it('🍅','עגבנייה')],odd:it('✈️','מטוס')},
+  {cat:'צעצועים',why:'כולם צעצועים, והתפוח הוא פרי',same:[it('⚽','כדורגל'),it('🧸','דובי'),it('🪁','עפיפון')],odd:it('🍎','תפוח')},
+  {cat:'רהיטים',why:'כולם רהיטים, והבננה היא פרי',same:[it('🪑','כיסא'),it('🛏️','מיטה'),it('🛋️','ספה')],odd:it('🍌','בננה')}]},
+ {label:'קל',sets:[
+  {cat:'חיות מעוף? לא - חיות יבשה',why:'הכלב, החתול והעכבר הם יונקים, והציפור היא עוף',same:[it('🐶','כלב'),it('🐱','חתול'),it('🐭','עכבר')],odd:it('🐦','ציפור')},
+  {cat:'כלי תחבורה ביבשה',why:'המכונית, האוטובוס והאופניים נוסעים ביבשה, והמטוס עף בשמיים',same:[it('🚗','מכונית'),it('🚌','אוטובוס'),it('🚲','אופניים')],odd:it('✈️','מטוס')},
+  {cat:'פירות',why:'התפוח, הבננה והתפוז הם פירות, והגזר הוא ירק',same:[it('🍎','תפוח'),it('🍌','בננה'),it('🍊','תפוז')],odd:it('🥕','גזר')},
+  {cat:'עופות',why:'הברווז, התרנגולת והינשוף הם עופות, והדג חי במים',same:[it('🦆','ברווז'),it('🐔','תרנגולת'),it('🦉','ינשוף')],odd:it('🐟','דג')},
+  {cat:'חיות ים',why:'הדג, הדולפין והתמנון חיים בים, והפרה חיה ביבשה',same:[it('🐟','דג'),it('🐬','דולפין'),it('🐙','תמנון')],odd:it('🐄','פרה')},
+  {cat:'אוכל',why:'הפיצה, ההמבורגר והצ׳יפס הם אוכל, והחלב הוא משקה',same:[it('🍕','פיצה'),it('🍔','המבורגר'),it('🍟','צ׳יפס')],odd:it('🥛','חלב')}]},
+ {label:'בינוני',sets:[
+  {cat:'חיות חווה',why:'הפרה, החזיר והתרנגולת הם חיות חווה, והאריה הוא חיה פראית',same:[it('🐮','פרה'),it('🐷','חזיר'),it('🐔','תרנגולת')],odd:it('🦁','אריה')},
+  {cat:'חיות מחמד',why:'הכלב, החתול והאוגר הם חיות מחמד, והפרה חיה בחווה',same:[it('🐶','כלב'),it('🐱','חתול'),it('🐹','אוגר')],odd:it('🐮','פרה')},
+  {cat:'ציפורים שעפות',why:'הנשר, הינשוף והברווז יכולים לעוף, והפינגווין לא עף',same:[it('🦅','נשר'),it('🦉','ינשוף'),it('🦆','ברווז')],odd:it('🐧','פינגווין')},
+  {cat:'חיות פראיות',why:'האריה, הפיל והקוף חיים בטבע, והכבשה היא חיית חווה',same:[it('🦁','אריה'),it('🐘','פיל'),it('🐒','קוף')],odd:it('🐑','כבשה')},
+  {cat:'ממתקים',why:'העוגה, הסוכרייה והשוקולד הם ממתקים, והתפוח הוא פרי',same:[it('🍰','עוגה'),it('🍭','סוכרייה'),it('🍫','שוקולד')],odd:it('🍎','תפוח')},
+  {cat:'חרקים',why:'הדבורה, הפרפר והנמלה הם חרקים, ולציפור יש נוצות',same:[it('🐝','דבורה'),it('🦋','פרפר'),it('🐜','נמלה')],odd:it('🐦','ציפור')}]},
+ {label:'מאתגר',sets:[
+  {cat:'חיות שעפות',why:'הנשר, הפרפר והדבורה עפים באוויר, והחילזון זוחל על האדמה',same:[it('🦅','נשר'),it('🦋','פרפר'),it('🐝','דבורה')],odd:it('🐌','חילזון')},
+  {cat:'חיים במים',why:'הדג, התמנון והסרטן חיים במים, והקקטוס גדל במדבר',same:[it('🐟','דג'),it('🐙','תמנון'),it('🦀','סרטן')],odd:it('🌵','קקטוס')},
+  {cat:'כלי נגינה',why:'הגיטרה, הפסנתר והתוף הם כלי נגינה, והספר הוא לקריאה',same:[it('🎸','גיטרה'),it('🎹','פסנתר'),it('🥁','תוף')],odd:it('📚','ספר')},
+  {cat:'דברים שגדלים',why:'הנבט, הפרח והעץ גדלים מהאדמה, והאבן לא גדלה',same:[it('🌱','נבט'),it('🌻','חמנית'),it('🌳','עץ')],odd:it('🪨','אבן')},
+  {cat:'דברים עם גלגלים',why:'למכונית, לאוטובוס ולאופניים יש גלגלים, ולסירה אין גלגלים',same:[it('🚗','מכונית'),it('🚌','אוטובוס'),it('🚲','אופניים')],odd:it('🛶','סירה')},
+  {cat:'כלי עבודה',why:'הפטיש, המברג והמפתח הם כלי עבודה, והדובי הוא צעצוע',same:[it('🔨','פטיש'),it('🪛','מברג'),it('🔧','מפתח אנגלי')],odd:it('🧸','דובי')}]},
+ {label:'קשה',sets:[
+  {cat:'פירות עגולים',why:'התפוח, התפוז והדובדבנים עגולים, והבננה ארוכה',same:[it('🍎','תפוח'),it('🍊','תפוז'),it('🍒','דובדבן')],odd:it('🍌','בננה')},
+  {cat:'דברים אדומים',why:'התות, התפוח והפלפל אדומים, והמלפפון ירוק',same:[it('🍓','תות'),it('🍎','תפוח'),it('🌶️','פלפל חריף')],odd:it('🥒','מלפפון')},
+  {cat:'בגדי חורף',why:'המעיל, הצעיף והכפפות מחממים בחורף, והחולצה היא לקיץ',same:[it('🧥','מעיל'),it('🧣','צעיף'),it('🧤','כפפות')],odd:it('👕','חולצה')},
+  {cat:'כדורים למשחק',why:'כדורגל, כדורסל והטניס הם כדורים של משחקים, והבלון הוא למסיבה',same:[it('⚽','כדורגל'),it('🏀','כדורסל'),it('🎾','טניס')],odd:it('🎈','בלון')},
+  {cat:'דברים מתוקים',why:'העוגה, השוקולד והגלידה מתוקים, והבייגלה מלוח',same:[it('🍰','עוגה'),it('🍫','שוקולד'),it('🍦','גלידה')],odd:it('🥨','בייגלה')},
+  {cat:'דברים בשמיים',why:'השמש, הירח והענן נמצאים בשמיים, והעץ גדל באדמה',same:[it('☀️','שמש'),it('🌙','ירח'),it('☁️','ענן')],odd:it('🌳','עץ')}]}
+];
+let saved={};try{saved=JSON.parse(localStorage.getItem(KEY))||{}}catch{}
+let state={level:Math.max(1,Math.min(5,Number(saved.level)||1)),stars:Number(saved.stars)||0,visits:(Number(saved.visits)||0)+1};
+let count=0,correct=0,solved=false,tries=0,round=null,seen=new Set();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch{}}
+function rand(a,b){return a+Math.floor(Math.random()*(b-a+1))}
+function pick(xs){return xs[rand(0,xs.length-1)]}
+function shuffle(xs){for(let i=xs.length-1;i>0;i--){const j=rand(0,i);[xs[i],xs[j]]=[xs[j],xs[i]]}return xs}
+function speak(t){try{const u=new SpeechSynthesisUtterance(t);u.lang='he-IL';u.rate=.92;speechSynthesis.cancel();speechSynthesis.speak(u)}catch{}}
+function newRound(){
+ const sets=LEVELS[state.level-1].sets;
+ let pool=sets.map((s,i)=>i).filter(i=>!seen.has(i));
+ if(!pool.length){seen.clear();pool=sets.map((s,i)=>i)}
+ const idx=pick(pool);seen.add(idx);
+ const set=sets[idx];
+ const cards=shuffle([...set.same,set.odd]);
+ round={set,cards};
+}
+function render(){
+ $('progress').textContent=`תמונה ${count+1} מתוך ${TOTAL}`;
+ $('stars').textContent=`⭐ ${state.stars}`;
+ $('bar').style.width=(count/TOTAL*100)+'%';
+ $('feedback').textContent='';$('feedback').className='feedback';
+ $('hint').textContent='';$('next').hidden=true;
+ $('level').textContent=`רמה ${state.level} מתוך 5 · ${LEVELS[state.level-1].label}`;
+ $('easier').disabled=state.level<=1;$('harder').disabled=state.level>=5;
+ const box=$('pics');box.innerHTML='';
+ round.cards.forEach(card=>{
+  const b=document.createElement('button');
+  b.innerHTML=`<span aria-hidden="true">${card.e}</span><small>${card.n}</small>`;
+  b.setAttribute('aria-label',card.n);
+  b.onclick=()=>choose(b,card);
+  box.appendChild(b);
+ });
+}
+function choose(btn,card){
+ if(solved)return;
+ if(card===round.set.odd){
+  solved=true;correct++;state.stars++;
+  btn.classList.add('right');
+  $('stars').textContent=`⭐ ${state.stars}`;
+  const praise=pick(['מעולה!','יופי!','נכון מאוד!','כל הכבוד!']);
+  $('feedback').textContent=`${praise} ${round.set.why}.`;
+  $('hint').textContent='';
+  $('next').hidden=false;save();
+ }else{
+  tries++;btn.classList.add('wrong');btn.disabled=true;
+  $('feedback').textContent='לא זו, נסו שוב';
+  $('feedback').className='feedback retry';
+  if(tries>=2)$('hint').textContent=`רמז: שלוש תמונות שייכות לאותה קבוצה. מצאו מי לא כמו האחרות.`;
+ }
+}
+function next(){
+ count++;tries=0;solved=false;
+ if(count>=TOTAL){
+  $('exercise').hidden=true;$('finish').hidden=false;
+  $('summary').textContent=`מצאתם נכון ${correct} מתוך ${TOTAL} סיבובים, וצברתם בסך הכול ${state.stars} כוכבים!`;
+ }else{newRound();render()}
+}
+$('next').onclick=next;
+$('again').onclick=()=>{count=0;correct=0;tries=0;solved=false;seen.clear();$('finish').hidden=true;$('exercise').hidden=false;newRound();render()};
+function setLevel(l){state.level=l;save();count=0;correct=0;tries=0;solved=false;seen.clear();$('finish').hidden=true;$('exercise').hidden=false;newRound();render()}
+$('easier').onclick=()=>{if(state.level>1)setLevel(state.level-1)};
+$('harder').onclick=()=>{if(state.level<5)setLevel(state.level+1)};
+$('hear').onclick=()=>speak(solved?$('feedback').textContent:'איזו תמונה לא שייכת לשלוש האחרות? הסתכלו על התמונות ובחרו.');
+$('visits').textContent=`ביקור מספר ${state.visits} במשחק הזה.`;
+save();
+newRound();render();
+</script></body></html>
