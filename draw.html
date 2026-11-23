@@ -10,9 +10,9 @@
 </style>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;font-family:Arial,sans-serif;color:#342653;padding:0 10px 14px;min-height:100dvh}
-main{max-width:720px;margin:0 auto}
-h1{font-size:24px;margin:4px 0 8px;text-align:center}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{margin:0;font-family:Arial,sans-serif;color:#342653;padding:0;background:#fff}
+h1{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 button{font:inherit;touch-action:manipulation;cursor:pointer;border:2px solid transparent;border-radius:14px;background:#fff;color:#342653;min-height:46px;min-width:46px;padding:6px 10px;font-weight:bold;box-shadow:0 2px 6px #3426531a}
 button:focus-visible{outline:3px solid #8e6bff;outline-offset:2px}
 button.on{border-color:#8e6bff;background:#efe7ff;box-shadow:0 0 0 3px #8e6bff55}
@@ -24,37 +24,55 @@ button.on{border-color:#8e6bff;background:#efe7ff;box-shadow:0 0 0 3px #8e6bff55
 .tool{font-size:15px}
 .tool span{font-size:22px;display:block;line-height:1.1}
 .shapes button,.stick button{font-size:28px;line-height:1;padding:4px}
-.canvaswrap{background:#fff;border-radius:16px;border:3px solid #8e6bff;box-shadow:0 6px 20px #8e6bff33;overflow:hidden;touch-action:none;line-height:0}
-canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
+.canvaswrap{position:fixed;inset:0;background:#fff;touch-action:none;line-height:0}
+canvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.topbar{position:fixed;top:0;left:0;right:0;z-index:20;direction:rtl;display:flex;gap:6px;align-items:center;justify-content:center;padding:6px 8px;background:linear-gradient(#ffffffef,#ffffffd0);box-shadow:0 2px 10px #8e6bff33;border-radius:0 0 18px 18px}
+.topbar .lp-back{min-height:48px;padding:0 14px;font-size:1.6rem;direction:ltr}
+.topbar .lp-back-text{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.topbar .lp-back-arrow{font-size:1.7rem}
+.tab{flex:1;max-width:76px;min-height:52px;padding:2px 2px;border-radius:14px;font-size:11px;line-height:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;border:2px solid #e3dafc}
+.tab b{font-size:23px;line-height:1.1}
+.tab[aria-expanded=true]{border-color:#8e6bff;background:#efe7ff}
+.drop{position:fixed;left:8px;right:8px;top:70px;z-index:19;max-height:calc(100dvh - 86px);overflow:auto;direction:rtl;margin:0;background:#fffffff2;box-shadow:0 8px 24px #34265340;border-radius:18px;padding:10px;animation:dd .14s ease-out}
+@keyframes dd{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.drop[hidden]{display:none}
+.drop .lbl{margin:0 0 6px}
 .size{display:flex;align-items:center;gap:8px;justify-content:center}
 .size input{width:55%;max-width:260px}
 .actions button{background:#fff3c9}
 .actions .danger{background:#ffe0e0}
-#msg{min-height:24px;text-align:center;font-size:15px;font-weight:bold;color:#2a7a5a;margin:4px 0}
+#msg{position:fixed;left:0;right:0;bottom:12px;z-index:15;pointer-events:none;text-align:center;font-size:16px;font-weight:bold;color:#2a7a5a}#msg:empty{display:none}#msg:not(:empty){display:block;width:fit-content;margin:0 auto;max-width:92vw;background:#fffffff0;padding:6px 14px;border-radius:14px;box-shadow:0 2px 8px #3426532a}
 .snd{font-size:13px}
 </style></head><body>
-<div class="lp-back-bar"><a class="lp-back" href="learning.html" aria-label="חזרה לבחירת מקצוע"><span class="lp-back-arrow" aria-hidden="true">←</span><span class="lp-back-text">חזרה לבחירת מקצוע</span></a></div>
-<main>
 <h1>לוח ציור</h1>
-<div class="canvaswrap"><canvas id="cv" width="900" height="700" aria-label="משטח ציור"></canvas></div>
+<div class="canvaswrap"><canvas id="cv" aria-label="משטח ציור"></canvas></div>
 <div id="msg" aria-live="polite"></div>
-<div class="panel"><p class="lbl">צבעים</p><div class="row colors" id="colors" role="group" aria-label="צבעים"></div></div>
-<div class="panel"><p class="lbl">כלים</p><div class="row" id="tools" role="group" aria-label="כלים"></div>
-<div class="size" style="margin-top:8px"><span aria-hidden="true">•</span><input id="size" type="range" min="2" max="60" value="12" aria-label="גודל"><span aria-hidden="true" style="font-size:26px">●</span></div></div>
-<div class="panel"><p class="lbl">צורות (לוחצים ואז מציירים על הלוח, הצורה אומרת את שמה)</p><div class="row shapes" id="shapes" role="group" aria-label="צורות"></div></div>
-<div class="panel"><p class="lbl">מדבקות</p><div class="row stick" id="stick" role="group" aria-label="מדבקות"></div></div>
-<div class="panel actions"><div class="row"><button id="undo">ביטול</button><button id="clear" class="danger">דף חדש</button><button id="save">שמירת תמונה</button><button id="mute" aria-pressed="false">קול</button></div></div>
-</main>
+<nav class="topbar" aria-label="כלי ציור">
+<a class="lp-back" href="learning.html" aria-label="חזרה לבחירת מקצוע"><span class="lp-back-arrow" aria-hidden="true">←</span><span class="lp-back-text">חזרה לבחירת מקצוע</span></a>
+<button class="tab" data-p="p-colors" aria-expanded="false" aria-controls="p-colors"><b aria-hidden="true">🎨</b>צבעים</button>
+<button class="tab" data-p="p-tools" aria-expanded="false" aria-controls="p-tools"><b aria-hidden="true">🖌️</b>כלים</button>
+<button class="tab" data-p="p-shapes" aria-expanded="false" aria-controls="p-shapes"><b aria-hidden="true">⭐</b>צורות</button>
+<button class="tab" data-p="p-stick" aria-expanded="false" aria-controls="p-stick"><b aria-hidden="true">🦄</b>מדבקות</button>
+<button class="tab" data-p="p-actions" aria-expanded="false" aria-controls="p-actions"><b aria-hidden="true">⚙️</b>עוד</button>
+</nav>
+<div class="drop panel" id="p-colors" hidden><p class="lbl">צבעים</p><div class="row colors" id="colors" role="group" aria-label="צבעים"></div></div>
+<div class="drop panel" id="p-tools" hidden><p class="lbl">כלים</p><div class="row" id="tools" role="group" aria-label="כלים"></div>
+<div class="size" style="margin-top:10px"><span aria-hidden="true">•</span><input id="size" type="range" min="2" max="60" value="12" aria-label="גודל"><span aria-hidden="true" style="font-size:26px">●</span></div></div>
+<div class="drop panel" id="p-shapes" hidden><p class="lbl">צורות (לוחצים ואז מציירים על הלוח, הצורה אומרת את שמה)</p><div class="row shapes" id="shapes" role="group" aria-label="צורות"></div></div>
+<div class="drop panel" id="p-stick" hidden><p class="lbl">מדבקות</p><div class="row stick" id="stick" role="group" aria-label="מדבקות"></div></div>
+<div class="drop panel actions" id="p-actions" hidden><div class="row"><button id="undo">ביטול</button><button id="clear" class="danger">דף חדש</button><button id="save">שמירת תמונה</button><button id="mute" aria-pressed="false">קול</button></div></div>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const cv=$('cv'),ctx=cv.getContext('2d',{willReadFrequently:true});
+let SC=1;
+function fit(first){const vv=window.visualViewport,cw=Math.round(vv?vv.width:innerWidth),ch=Math.round(vv?vv.height:innerHeight);SC=Math.min(window.devicePixelRatio||1,2);const w=Math.max(200,Math.round(cw*SC)),h=Math.max(200,Math.round(ch*SC));if(!first&&Math.abs(w-cv.width)<4&&Math.abs(h-cv.height)<4)return;let old=null;if(!first){old=document.createElement('canvas');old.width=cv.width;old.height=cv.height;old.getContext('2d').drawImage(cv,0,0)}cv.width=w;cv.height=h;ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);if(old)ctx.drawImage(old,0,0);hist.length=0}
 const COLORS=['#e53935','#fb8c00','#fdd835','#43a047','#00acc1','#1e88e5','#8e24aa','#ec407a','#795548','#222222','#ffffff','#8bc34a'];
 const TOOLS=[['brush','','מכחול'],['marker','','טוש עבה'],['rainbow','','קשת'],['spray','','ספריי'],['fill','','מילוי'],['eraser','','מחק']];
 const SHAPES=[['circle','⚪','עיגול'],['square','⬜','ריבוע'],['rect','▭','מלבן'],['triangle','🔺','משולש'],['star','⭐','כוכב'],['heart','❤️','לב'],['oval','🥚','אליפסה'],['diamond','🔷','מעוין']];
 const STICKERS=[['🐶','כלב'],['🐱','חתול'],['🦋','פרפר'],['🌸','פרח'],['☀️','שמש'],['🌈','קשת'],['🏠','בית'],['🚗','מכונית'],['🎈','בלון'],['🦄','חד קרן'],['🐟','דג'],['🌳','עץ']];
 let color=COLORS[5],tool='brush',shapeKind=null,sticker=null,muted=false;
-const hist=[];
+const hist=[];fit(true);let rzT=0;window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{if(!drawing)fit(false)},250)});
 function say(t){if(muted)return;try{const u=new SpeechSynthesisUtterance(t);u.lang='he-IL';u.rate=.9;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
 function msg(t){$('msg').textContent=t}
 function snap(){try{hist.push(ctx.getImageData(0,0,cv.width,cv.height));if(hist.length>25)hist.shift()}catch(e){}}
@@ -77,7 +95,7 @@ function refresh(){
 }
 refresh();
 function pos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height}}
-function size(){return +$('size').value}
+function size(){return +$('size').value*SC}
 let drawing=false,last=null,start=null,base=null,hue=0,moved=false;
 function path(k,x,y,r,r2,c){c=c||ctx;
  c.beginPath();
@@ -145,14 +163,14 @@ cv.addEventListener('pointermove',e=>{
  if(!drawing)return;e.preventDefault();const p=pos(e);
  if(tool==='shape'||tool==='sticker'){
   moved=true;ctx.putImageData(base,0,0);
-  const r=Math.max(20,Math.hypot(p.x-start.x,p.y-start.y));
+  const r=Math.max(20*SC,Math.hypot(p.x-start.x,p.y-start.y));
   tool==='shape'?drawShape(shapeKind,start.x,start.y,r):drawSticker(start.x,start.y,r);return}
  stroke(last,p);last=p
 });
 function end(e){
  if(!drawing)return;drawing=false;
  if((tool==='shape'||tool==='sticker')&&!moved){
-  const r=Math.max(35,size()*3.5);
+  const r=Math.max(35*SC,size()*3.5);
   tool==='shape'?drawShape(shapeKind,start.x,start.y,r):drawSticker(start.x,start.y,r);
  }
  if(tool==='shape'){const s=SHAPES.find(s=>s[0]===shapeKind);say(s[2])}
@@ -165,5 +183,13 @@ $('mute').onclick=function(){muted=!muted;this.textContent=muted?'🔇 ללא ק
 $('save').onclick=()=>{
  cv.toBlob(b=>{if(!b){msg('לא הצלחתי לשמור');return}
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ציור.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);msg('התמונה נשמרה במכשיר')},'image/png')};
+const tabs=[...document.querySelectorAll('.tab')];
+function openPanel(id){tabs.forEach(t=>{const on=t.dataset.p===id;t.setAttribute('aria-expanded',on);$(t.dataset.p).hidden=!on})}
+tabs.forEach(t=>t.addEventListener('click',()=>{const open=t.getAttribute('aria-expanded')==='true';openPanel(open?'':t.dataset.p)}));
+cv.addEventListener('pointerdown',()=>openPanel(''),true);
+['colors','shapes','stick'].forEach(id=>$(id).addEventListener('click',e=>{if(e.target.closest('button'))setTimeout(()=>openPanel(''),120)}));
+$('tools').addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b.textContent.trim()==='מילוי')setTimeout(()=>openPanel(''),120)});
+$('undo').addEventListener('click',()=>openPanel(''));$('save').addEventListener('click',()=>openPanel(''));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')openPanel('')});
 document.addEventListener('touchmove',e=>{if(e.target===cv)e.preventDefault()},{passive:false});
 </script></body></html>
