@@ -289,10 +289,12 @@ function takePhoto(){
  },'image/png');
 }
 $('snap2').addEventListener('click',takePhoto);
-/* tap on the picture takes a photo (only when face tracking is working, so manual dragging still works) */
-let tapStart=null;
-cv.addEventListener('pointerdown',e=>{tapStart={x:e.clientX,y:e.clientY,t:Date.now()}});
-cv.addEventListener('pointerup',e=>{if(!tapStart)return;const m=Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y),d=Date.now()-tapStart.t;tapStart=null;if(landmarker&&m<10&&d<500)takePhoto()});
+/* tap on the picture takes a photo (a short single tap only; dragging or pinching never captures) */
+let tapStart=null,multi=false,down=new Set();
+cv.addEventListener('pointerdown',e=>{down.add(e.pointerId);if(down.size>1)multi=true;if(down.size===1){multi=false;tapStart={x:e.clientX,y:e.clientY,t:Date.now(),moved:false}}});
+cv.addEventListener('pointermove',e=>{if(tapStart&&Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y)>=12)tapStart.moved=true});
+cv.addEventListener('pointercancel',e=>{down.delete(e.pointerId);tapStart=null});
+cv.addEventListener('pointerup',e=>{down.delete(e.pointerId);if(!tapStart)return;const t=tapStart;tapStart=null;if(multi||t.moved||Date.now()-t.t>600)return;if(Math.hypot(e.clientX-t.x,e.clientY-t.y)>=12)return;takePhoto()});
 $('shotagain').addEventListener('click',()=>{$('shot').hidden=true});
 $('shotsave').addEventListener('click',async()=>{
  if(!lastBlob)return;const file=new File([lastBlob],'selfie.png',{type:'image/png'});
