@@ -398,10 +398,10 @@ if(answered)return;
 if(ci===i){
 answered=true;b.classList.add("right");fb.textContent=praise();fb.className="feedback good";confetti();
 if(mistakes===0||true){p.stars++;saveAll();renderHeader();window.lpCelebrate&&lpCelebrate({speak:false});}
-sayLetterWithText(i,kind==="match"?L[2]:"",()=>{guardedTransition(()=>{qi++;mistakes=0;next();},300);});
+const goNext=()=>{guardedTransition(()=>{qi++;mistakes=0;next();},300);};if(kind!=="find")say("כל הכבוד!",goNext);else sayLetterWithText(i,"",goNext);
 }else{
 mistakes++;b.classList.add("wrong");fb.textContent=tryMsg();fb.className="feedback try";
-if(kind==="match")say(M[2]);else sayLetter(ci);
+if(kind!=="find")say("כמעט! נסי שוב.");else sayLetter(ci);
 }
 };
 grid.appendChild(b);
