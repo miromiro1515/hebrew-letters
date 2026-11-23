@@ -1,0 +1,24 @@
+/* Shared colorful look. Only background, accents and headings: no layout changes. */
+html body{
+background:
+ radial-gradient(circle at 8% 12%,#ffd1e8 0 22px,transparent 23px),
+ radial-gradient(circle at 92% 20%,#c9f0ff 0 30px,transparent 31px),
+ radial-gradient(circle at 15% 78%,#fff0a8 0 26px,transparent 27px),
+ radial-gradient(circle at 88% 85%,#cdf7d6 0 34px,transparent 35px),
+ radial-gradient(circle at 50% 4%,#e3d4ff 0 18px,transparent 19px),
+ linear-gradient(155deg,#fff0d4 0%,#ffe3f1 35%,#e1ecff 70%,#dcfbe9 100%) !important;
+background-attachment:fixed !important}
+html body::before{content:"";position:fixed;top:0;left:0;right:0;height:8px;z-index:50;pointer-events:none;
+background:linear-gradient(90deg,#ff5d8f,#ff9f43,#ffd23f,#3ed598,#38b6ff,#8e6bff,#ff5d8f)}
+h1{color:#5a2fc2 !important;text-shadow:0 2px 0 #ffffffcc}
+h2{color:#2a7a5a}
+html body .card,html body main>section,html body .choices a{border-top:6px solid #8e6bff}
+html body .card,html body main>section{box-shadow:0 6px 22px #8e6bff2e}
+html body .primary,html body button.primary{background:linear-gradient(135deg,#8e6bff,#ff5d8f) !important;color:#fff !important}
+html body .choices a:nth-child(1){border-top-color:#38b6ff}
+html body .choices a:nth-child(2){border-top-color:#ff5d8f}
+html body .choices a:nth-child(3){border-top-color:#3ed598}
+html body .choices a:nth-child(4){border-top-color:#ff9f43}
+html body .choices a:nth-child(5){border-top-color:#8e6bff}
+html body .choices a:nth-child(6){border-top-color:#ffd23f}
+.lp-back{background:#fff6c9 !important;border-color:#ffb703 !important;color:#7a3db8 !important}
