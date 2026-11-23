@@ -70,20 +70,21 @@ function paint(){document.querySelectorAll('#hats button').forEach(b=>b.classLis
 paint();
 const status=t=>$('status').textContent=t;
 
+const withTO=(p,ms,name)=>Promise.race([p,new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout '+name)),ms))]);
 async function loadTracker(){
  if(landmarker||trackState==='failed')return;
  trackState='loading';status('טוענים זיהוי פנים (פעם ראשונה לוקח כמה שניות)...');
  try{
   const base='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
-  const m=await import(base+'/vision_bundle.mjs');
-  const fs=await m.FilesetResolver.forVisionTasks(base+'/wasm');
+  const m=await withTO(import(base+'/vision_bundle.mjs'),20000,'import');
+  const fs=await withTO(m.FilesetResolver.forVisionTasks(base+'/wasm'),20000,'wasm');
   const opts=d=>({baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',delegate:d},runningMode:'VIDEO',numFaces:1});
-  try{landmarker=await m.FaceLandmarker.createFromOptions(fs,opts('GPU'))}catch(e){landmarker=await m.FaceLandmarker.createFromOptions(fs,opts('CPU'))}
+  try{landmarker=await withTO(m.FaceLandmarker.createFromOptions(fs,opts('GPU')),12000,'gpu')}catch(e){landmarker=await withTO(m.FaceLandmarker.createFromOptions(fs,opts('CPU')),25000,'cpu')}
   trackState='ready';status('');
- }catch(e){trackState='failed';status('הזיהוי האוטומטי לא נטען. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}
+ }catch(e){landmarker=null;trackState='failed';status('הזיהוי האוטומטי לא נטען. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}
 }
 /* manual fallback: one placement for everything, moved by finger */
-const manual={x:.5,y:.45,s:.45,r:0};
+const manual={x:.5,y:.55,s:.4,r:0};
 let ptrs=new Map(),pinch0=null;
 cv.addEventListener('pointerdown',e=>{if(face)return;ptrs.set(e.pointerId,[e.clientX,e.clientY]);try{cv.setPointerCapture(e.pointerId)}catch(_){}pinch0=null});
 cv.addEventListener('pointermove',e=>{if(face||!ptrs.has(e.pointerId))return;const r=cv.getBoundingClientRect();const o=ptrs.get(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);
@@ -223,6 +224,7 @@ function drawAll(f){
  drawGlasses(f);drawHat(f);
 }
 function resize(){const r=cv.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);const w=Math.round(r.width*d),h=Math.round(r.height*d);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}}
+let detErr=0,noFace=0;
 function loop(){
  raf=requestAnimationFrame(loop);
  if(!stream||vid.readyState<2)return;
@@ -230,10 +232,15 @@ function loop(){
  let f=null;
  if(landmarker&&vid.currentTime!==lastTs){
   lastTs=vid.currentTime;
-  try{const res=landmarker.detectForVideo(vid,performance.now());face=computeFace(res,w,h)}catch(e){face=null}
+  try{const res=landmarker.detectForVideo(vid,performance.now());face=computeFace(res,w,h);detErr=0}catch(e){face=null;if(++detErr>8){landmarker=null;trackState='failed';status('הזיהוי האוטומטי לא עובד בטלפון הזה. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}}
  }
- if(landmarker){f=smoothFace(face);if(!f)status('מחפשים פנים... מסתכלים למצלמה');else status('')}
+ if(landmarker){f=smoothFace(face);
+  if(f){noFace=0;status('')}
+  else{if(!noFace)noFace=performance.now();
+   if(performance.now()-noFace>3000){f=manualFace(w,h);status('לא רואים פנים. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}
+   else status('מחפשים פנים... מסתכלים למצלמה')}}
  else if(trackState==='failed'){f=manualFace(w,h)}
+ else if(trackState==='loading'){f=manualFace(w,h);status('טוענים זיהוי פנים... בינתיים אפשר לגרור את הקישוטים עם האצבע.')}
  if(f)drawAll(f);
 }
 let mirror=true;
