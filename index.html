@@ -79,9 +79,10 @@ summary{cursor:pointer;font-weight:700;color:var(--purple);}
 .puzzle-piece{border:3px solid #d9cdf6;background:white;box-shadow:0 3px 0 #d9cdf6;}
 .puzzle-piece.selected{border-color:#8b5cf6;background:#f1eaff;outline:3px solid #e8dfff;}
 .puzzle-piece:disabled{visibility:hidden;}
-.puzzle-piece{touch-action:none;}
+.puzzle-piece,.puzzle-cell{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+.puzzle-card{-webkit-user-select:none;user-select:none;}
 .puzzle-cell.drop-hint{border-color:#8b5cf6;box-shadow:0 0 0 3px #e8dfff;}
-.puzzle-ghost{position:fixed;z-index:60;pointer-events:none;opacity:.92;border:3px solid #8b5cf6;border-radius:10px;box-shadow:0 8px 18px rgba(60,40,120,.35);background:#fff;padding:0;overflow:hidden;}
+.puzzle-ghost{position:fixed;z-index:9999;pointer-events:none;touch-action:none;opacity:.92;border:3px solid #8b5cf6;border-radius:10px;box-shadow:0 8px 18px rgba(60,40,120,.35);background:#fff;padding:0;overflow:hidden;}
 .puzzle-ghost img{width:100%;height:100%;display:block;}
 .puzzle-progress{font-size:1.15rem;color:#6b6390;}
 .puzzle-card .feedback{font-size:1.25rem;margin-top:6px;}
@@ -112,14 +113,14 @@ button.big{min-height:48px;min-width:110px;padding:10px 18px;font-size:1.1rem;}.
 .tiles{gap:6px;margin:8px 0;}.tile{width:42px;height:54px;border-radius:12px;font-size:2.2rem;}
 .built-word{font-size:3.4rem;}.done-emoji{font-size:3rem;}
 .puzzle-card{padding:12px 10px;}.puzzle-card .phase-title{font-size:1.4rem;}.puzzle-hint{font-size:1rem;margin:6px 0;}
-.puzzle-board,.puzzle-dense .puzzle-board{width:190px;margin:8px auto;gap:3px;padding:3px;}
-.puzzle-pieces,.puzzle-dense .puzzle-pieces{width:180px;margin:8px auto;gap:7px;}
+.puzzle-board,.puzzle-dense .puzzle-board{width:min(230px,100%);margin:8px auto;gap:3px;padding:3px;}
+.puzzle-pieces,.puzzle-dense .puzzle-pieces{width:min(250px,100%);margin:8px auto;gap:8px;}
 .puzzle-progress{font-size:1rem;}.puzzle-card .feedback{font-size:1rem;}
 .puzzle-reference{font-size:2.3rem;}.puzzle-reward{width:140px;height:145px;margin:10px auto;}
 footer{margin-top:12px;}details{padding:10px 12px;}#visits{margin-top:10px;}
 }
 </style>
-</head>
+<link rel="stylesheet" href="theme.css"></head>
 <body>
 <div class="lp-back-bar"><a class="lp-back" href="learning.html" aria-label="חזרה לבחירת מקצוע"><span class="lp-back-arrow" aria-hidden="true">←</span><span class="lp-back-text">חזרה לבחירת מקצוע</span></a></div>
 <div class="wrap">
@@ -396,7 +397,7 @@ b.onclick=()=>{
 if(answered)return;
 if(ci===i){
 answered=true;b.classList.add("right");fb.textContent=praise();fb.className="feedback good";confetti();
-if(mistakes===0||true){p.stars++;saveAll();renderHeader();}
+if(mistakes===0||true){p.stars++;saveAll();renderHeader();window.lpCelebrate&&lpCelebrate({speak:false});}
 sayLetterWithText(i,kind==="match"?L[2]:"",()=>{guardedTransition(()=>{qi++;mistakes=0;next();},300);});
 }else{
 mistakes++;b.classList.add("wrong");fb.textContent=tryMsg();fb.className="feedback try";
@@ -463,7 +464,7 @@ sayWord(w,()=>say(pos===0?"שמעת? מה האות הראשונה במילה?":"
 }
 function completeWord(p,w){
 stopNarration();
-p.stars++;saveAll();renderHeader();
+p.stars++;saveAll();renderHeader();window.lpCelebrate&&lpCelebrate({speak:false});
 stage.innerHTML="";
 const c=el("div","card");
 const picture=el("div","done-emoji");picture.appendChild(wordPicture(w));c.appendChild(picture);
@@ -547,31 +548,51 @@ if(slots.every(v=>v!==null))evaluate();
 }
 const cellAt=(x,y)=>cells.findIndex(b=>{const r=b.getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;});
 function choose(k,b){clearSelection();selected=k;b.classList.add("selected");b.setAttribute("aria-pressed","true");}
+function nearestCell(x,y){
+let best=-1,bd=1e9,lim=0;
+cells.forEach((v,j)=>{if(fixed.has(j))return;const r=v.getBoundingClientRect();if(!r.width)return;
+const cx=(r.left+r.right)/2,cy=(r.top+r.bottom)/2,inside=x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;
+const d=inside?0:Math.hypot(x-cx,y-cy);if(d<bd){bd=d;best=j;lim=Math.max(r.width,r.height)*1.1;}});
+return best>=0&&bd<=lim?best:-1;}
+function dragOff(){return Math.max(28,(drag&&drag.ghost?drag.ghost.offsetHeight:50)*0.6);}
+function killGhost(){document.querySelectorAll(".puzzle-ghost").forEach(g=>g.remove());}
 function bind(b,getPiece,onTap){
+b.style.touchAction="none";b.style.webkitUserSelect="none";b.style.userSelect="none";b.style.webkitTouchCallout="none";
+b.addEventListener("contextmenu",e=>e.preventDefault());b.addEventListener("dragstart",e=>e.preventDefault());
 b.addEventListener("pointerdown",e=>{
 if(done||e.isPrimary===false||(e.pointerType==="mouse"&&e.button!==0))return;
 const k=getPiece();if(k===null||k===undefined)return;
-ignoreClick=false;drag={k:k,id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,ghost:null};
-try{b.setPointerCapture(e.pointerId);}catch(_){}
-});
-b.addEventListener("pointermove",e=>{
-if(!drag||e.pointerId!==drag.id||done)return;
-if(!drag.moved&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<8)return;
-if(!drag.moved){
-drag.moved=true;choose(drag.k,b);const r=b.getBoundingClientRect(),g=el("div","puzzle-ghost");
-g.style.width=r.width+"px";g.style.height=r.height+"px";g.setAttribute("aria-hidden","true");
-const img=new Image();img.src=art[drag.k].src;g.appendChild(img);c.appendChild(g);drag.ghost=g;
+killGhost();if(drag&&drag.cleanup)drag.cleanup();
+ignoreClick=false;drag={k:k,id:e.pointerId,x:e.clientX,y:e.clientY,moved:false,ghost:null,b:b};
+const d=drag;
+const mv=ev=>{
+if(drag!==d||ev.pointerId!==d.id||done)return;
+if(ev.cancelable)ev.preventDefault();
+if(!d.moved&&Math.hypot(ev.clientX-d.x,ev.clientY-d.y)<6)return;
+if(!d.moved){
+d.moved=true;choose(d.k,b);const r=b.getBoundingClientRect(),g=el("div","puzzle-ghost"),w=Math.max(r.width,72),h=Math.max(r.height*(w/r.width),72);
+g.style.width=w+"px";g.style.height=h+"px";g.setAttribute("aria-hidden","true");
+const img=new Image();img.src=art[d.k].src;img.draggable=false;g.appendChild(img);document.body.appendChild(g);d.ghost=g;
 }
-drag.ghost.style.left=(e.clientX-drag.ghost.offsetWidth/2)+"px";drag.ghost.style.top=(e.clientY-drag.ghost.offsetHeight/2)+"px";
-const target=cellAt(e.clientX,e.clientY);cells.forEach((v,j)=>v.classList.toggle("drop-hint",j===target&&!fixed.has(j)));
-});
-const end=(e,cancel)=>{
-if(!drag||e.pointerId!==drag.id)return;
-const wasMoved=drag.moved;if(drag.ghost)drag.ghost.remove();drag=null;
-cells.forEach(v=>v.classList.remove("drop-hint"));
-if(wasMoved){ignoreClick=true;if(!cancel){const target=cellAt(e.clientX,e.clientY);if(target>=0)place(target);}else clearSelection();}
+d.ghost.style.left=(ev.clientX-d.ghost.offsetWidth/2)+"px";d.ghost.style.top=(ev.clientY-d.ghost.offsetHeight/2-dragOff())+"px";
+const target=nearestCell(ev.clientX,ev.clientY-dragOff()*0.5);cells.forEach((v,j)=>v.classList.toggle("drop-hint",j===target));
 };
-b.addEventListener("pointerup",e=>end(e,false));b.addEventListener("pointercancel",e=>end(e,true));
+const tm=ev=>{if(drag===d&&d.moved&&ev.cancelable)ev.preventDefault();};
+const fin=(ev,cancel)=>{
+if(drag!==d)return;
+if(ev&&ev.pointerId!==undefined&&ev.pointerId!==d.id)return;
+d.cleanup();
+const wasMoved=d.moved;if(d.ghost)d.ghost.remove();killGhost();drag=null;
+cells.forEach(v=>v.classList.remove("drop-hint"));
+if(wasMoved){ignoreClick=true;setTimeout(()=>{ignoreClick=false;},350);
+if(!cancel&&ev){const target=nearestCell(ev.clientX,ev.clientY-18);if(target>=0)place(target);else clearSelection();}else clearSelection();}
+};
+const up=ev=>fin(ev,false),cn=ev=>fin(ev,true);
+d.cleanup=()=>{document.removeEventListener("pointermove",mv);document.removeEventListener("pointerup",up);document.removeEventListener("pointercancel",cn);document.removeEventListener("touchmove",tm);window.removeEventListener("blur",wb);};
+const wb=()=>fin(null,true);
+document.addEventListener("pointermove",mv,{passive:false});document.addEventListener("pointerup",up);document.addEventListener("pointercancel",cn);
+document.addEventListener("touchmove",tm,{passive:false});window.addEventListener("blur",wb);
+});
 b.onclick=()=>{if(ignoreClick){ignoreClick=false;return;}if(!done)onTap();};
 }
 art.forEach((v,k)=>{
@@ -591,7 +612,7 @@ check.onclick=evaluate;next.onclick=()=>runPuzzle(p);row.appendChild(check);row.
 const hear=el("button","big btn-hear","איך משחקים?");hear.onclick=()=>say("גררי חלקים ללוח. אפשר גם ללחוץ על חלק ואז על מקום. בסוף נבדוק. כדי לתקן, גררי חלק על חלק אחר והם יתחלפו. פאזל הבא זמין גם בלי לסיים.");c.appendChild(hear);stage.appendChild(c);paint();
 }
 function completePuzzle(p,i,c){
-p.stars++;saveAll();renderHeader();confetti();
+p.stars++;saveAll();renderHeader();confetti();window.lpCelebrate&&lpCelebrate({speak:false});
 c.querySelector(".puzzle-hint").textContent="כל הכבוד! הרכבת את האות "+LETTERS[i][1]+"!";
 c.querySelector(".phase-title").textContent="כל הכבוד!";
 c.querySelector(".puzzle-pieces").remove();c.querySelector(".feedback").remove();c.querySelectorAll(".btn-row,.btn-hear").forEach(v=>v.remove());
@@ -762,7 +783,7 @@ sizeCanvas();
 sayWord(w,()=>say("מה האות הראשונה במילה? עברי אליה במבוך."));
 }
 function completeMaze(p,w,li,c){
-p.stars++;saveAll();renderHeader();confetti();
+p.stars++;saveAll();renderHeader();confetti();window.lpCelebrate&&lpCelebrate({speak:false});
 c.innerHTML="";
 c.appendChild(el("div","phase-title","כל הכבוד!"));
 c.appendChild(el("div","puzzle-hint","הגעת לאות "+LETTERS[li][0]+", האות שפותחת את המילה "+WORDS[w][0]+"!"));
@@ -797,5 +818,5 @@ saveAll();
 }
 startSession();
 </script>
-</body>
+<script src="celebrate.js"></script></body>
                  </html>
