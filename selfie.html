@@ -45,6 +45,7 @@ canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 <div id="status" aria-live="polite"></div>
 <div class="row"><button id="snap2" class="big" style="background:linear-gradient(135deg,#ff9f43,#ff5d8f);color:#fff">צילום</button></div><p class="note" style="text-align:center">אפשר גם ללחוץ על התמונה כדי לצלם.</p>
 <p class="lbl">כובעים</p><div class="row" id="hats"></div>
+<p class="lbl">שיער</p><div class="row" id="hair"></div><div class="row" id="hairc" aria-label="צבע שיער"></div>
 <p class="lbl">משקפיים</p><div class="row" id="glasses"></div>
 <p class="lbl">עוד</p><div class="row" id="extra"></div>
 <div class="row"><button id="flip">מצלמה קדמית / אחורית</button><button id="stop">סגירת מצלמה</button></div>
@@ -58,11 +59,14 @@ const vid=$('vid'),cv=$('cv'),ctx=cv.getContext('2d');
 const HATS=[['none','🚫','בלי'],['party','🥳','מסיבה'],['top','🎩','צילינדר'],['crown','👑','כתר'],['cap','🧢','כובע'],['grad','🎓','בוגר'],['cowboy','🤠','בוקר']];
 const GLASSES=[['none','🚫','בלי'],['round','👓','עגולים'],['sun','🕶️','שמש'],['heart','😍','לבבות'],['star','🤩','כוכבים']];
 const EXTRA=[['beard','🧔','זקן'],['dog','🐶','כלבלב'],['mustache','🥸','שפם']];
-const sel={hat:'party',glasses:'none',beard:false,dog:false,mustache:false};
+const HAIR=[['none','בלי'],['long','ארוך'],['short','קצר'],['pony','קוקו'],['braids','צמות'],['pig','שתי קוקיות']];
+const HCOL=[['#2b1b12','שחור'],['#6d4228','חום'],['#e5b85c','בלונדיני'],['#b5441f','ג׳ינג׳י'],['#ff6fa8','ורוד'],['#3b82f6','כחול']];
+const sel={hat:'party',glasses:'none',beard:false,dog:false,mustache:false,hair:'none',hcol:'#6d4228'};
 let stream=null,landmarker=null,facing='user',raf=0,lastTs=-1,face=null,smooth=null,trackState='idle';
 function mk(box,list,key,single){list.forEach(([k,e,n])=>{const b=document.createElement('button');b.textContent=n;b.setAttribute('aria-label',n);b.dataset.k=k;b.addEventListener('click',()=>{if(single){sel[key]=k}else{sel[k]=!sel[k]}paint()});box.appendChild(b)})}
-mk($('hats'),HATS,'hat',true);mk($('glasses'),GLASSES,'glasses',true);mk($('extra'),EXTRA,null,false);
-function paint(){document.querySelectorAll('#hats button').forEach(b=>b.classList.toggle('on',sel.hat===b.dataset.k));document.querySelectorAll('#glasses button').forEach(b=>b.classList.toggle('on',sel.glasses===b.dataset.k));document.querySelectorAll('#extra button').forEach(b=>b.classList.toggle('on',!!sel[b.dataset.k]))}
+mk($('hats'),HATS,'hat',true);mk($('hair'),HAIR.map(([k,n])=>[k,'',n]),'hair',true);
+HCOL.forEach(([c,n])=>{const b=document.createElement('button');b.textContent=n;b.dataset.c=c;b.style.borderLeft='14px solid '+c;b.addEventListener('click',()=>{sel.hcol=c;if(sel.hair==='none')sel.hair='long';paint()});$('hairc').appendChild(b)});mk($('glasses'),GLASSES,'glasses',true);mk($('extra'),EXTRA,null,false);
+function paint(){document.querySelectorAll('#hats button').forEach(b=>b.classList.toggle('on',sel.hat===b.dataset.k));document.querySelectorAll('#glasses button').forEach(b=>b.classList.toggle('on',sel.glasses===b.dataset.k));document.querySelectorAll('#hair button').forEach(b=>b.classList.toggle('on',sel.hair===b.dataset.k));document.querySelectorAll('#hairc button').forEach(b=>b.classList.toggle('on',sel.hair!=='none'&&sel.hcol===b.dataset.c));document.querySelectorAll('#extra button').forEach(b=>b.classList.toggle('on',!!sel[b.dataset.k]))}
 paint();
 const status=t=>$('status').textContent=t;
 
@@ -181,7 +185,38 @@ function drawDog(f){
  rot(f,f.nose.x,f.nose.y,()=>{const r=f.fw*.09;ctx.beginPath();ctx.ellipse(0,0,r*1.3,r,0,0,7);ctx.fillStyle='#111';ctx.fill();ctx.beginPath();ctx.ellipse(-r*.4,-r*.35,r*.35,r*.2,0,0,7);ctx.fillStyle='#fff8';ctx.fill()});
  rot(f,f.mouth.x,f.mouth.y,()=>{const r=f.fw*.08;ctx.beginPath();ctx.ellipse(0,r*1.1,r*.9,r*1.4,0,0,7);ctx.fillStyle='#ff6f91';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#c2185b';ctx.stroke();ctx.beginPath();ctx.moveTo(0,r*.1);ctx.lineTo(0,r*1.9);ctx.stroke()});
 }
+function drawHair(f){
+ const k=sel.hair;if(k==='none')return;
+ const u=f.fw,h=f.fh,col=sel.hcol,cx=(f.top.x+f.chin.x)/2,cy=(f.top.y+f.chin.y)/2;
+ rot(f,cx,cy,()=>{
+  ctx.fillStyle=col;ctx.strokeStyle='#0005';ctx.lineWidth=Math.max(2,u*.012);ctx.lineJoin='round';
+  const blob=(x,y,rx,ry,a)=>{ctx.beginPath();ctx.ellipse(x,y,rx,ry,a||0,0,7);ctx.fill();ctx.stroke()};
+  const tie=(x,y)=>{ctx.beginPath();ctx.arc(x,y,u*.045,0,7);ctx.fillStyle='#ff5d8f';ctx.fill();ctx.strokeStyle='#0005';ctx.stroke();ctx.fillStyle=col};
+  /* hair behind and around the head */
+  if(k==='long'){
+   [-1,1].forEach(s=>{ctx.beginPath();ctx.roundRect(s>0?u*.42:-u*.84,-h*.38,u*.42,h*1.4,u*.2);ctx.fill();ctx.stroke()});
+  }
+  if(k==='pony'){
+   blob(u*.62,-h*.05,u*.1,u*.1);
+   ctx.beginPath();ctx.moveTo(u*.6,-h*.08);ctx.bezierCurveTo(u*1.05,-h*.1,u*1.15,h*.35,u*.82,h*.62);ctx.bezierCurveTo(u*.78,h*.35,u*.66,h*.2,u*.58,h*.02);ctx.closePath();ctx.fill();ctx.stroke();
+  }
+  if(k==='pig'){
+   [-1,1].forEach(s=>{ctx.beginPath();ctx.moveTo(s*u*.58,-h*.12);ctx.bezierCurveTo(s*u*1.0,-h*.15,s*u*1.15,h*.25,s*u*.9,h*.5);ctx.bezierCurveTo(s*u*.8,h*.3,s*u*.68,h*.15,s*u*.56,h*.02);ctx.closePath();ctx.fill();ctx.stroke()});
+  }
+  if(k==='braids'){
+   [-1,1].forEach(s=>{const x0=s*u*.62;for(let i=0;i<7;i++){const y=-h*.08+i*h*.15,w=u*(.13-i*.006);blob(x0+(i%2?-1:1)*u*.035,y,w,h*.09,(i%2?-1:1)*.5)}tie(x0,h*.98)});
+  }
+  /* hair on top of the head */
+  ctx.fillStyle=col;ctx.strokeStyle='#0005';
+  const capRx=k==='short'?u*.62:u*.66,capRy=k==='short'?h*.58:h*.64;
+  ctx.beginPath();ctx.ellipse(0,-h*.24,capRx,capRy,0,0,7);ctx.fill();ctx.stroke();
+  if(k==='pony'||k==='pig'){tie(u*.6*(k==='pony'?1:1),-h*.1);if(k==='pig')tie(-u*.6,-h*.1)}
+  /* keep the face itself visible */
+  ctx.save();ctx.globalCompositeOperation='destination-out';ctx.beginPath();ctx.ellipse(0,h*.02,u*.5,h*.5,0,0,7);ctx.fill();ctx.restore();
+ });
+}
 function drawAll(f){
+ drawHair(f);
  if(sel.dog)drawDog(f);
  if(sel.beard)drawBeard(f);
  if(sel.mustache)drawMustache(f);
