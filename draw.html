@@ -35,7 +35,7 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
 </style></head><body>
 <div class="lp-back-bar"><a class="lp-back" href="learning.html" aria-label="חזרה לבחירת מקצוע"><span class="lp-back-arrow" aria-hidden="true">←</span><span class="lp-back-text">חזרה לבחירת מקצוע</span></a></div>
 <main>
-<h1>🎨 לוח ציור</h1>
+<h1>לוח ציור</h1>
 <div class="canvaswrap"><canvas id="cv" width="900" height="700" aria-label="משטח ציור"></canvas></div>
 <div id="msg" aria-live="polite"></div>
 <div class="panel"><p class="lbl">צבעים</p><div class="row colors" id="colors" role="group" aria-label="צבעים"></div></div>
@@ -43,14 +43,14 @@ canvas{width:100%;height:auto;display:block;touch-action:none;cursor:crosshair}
 <div class="size" style="margin-top:8px"><span aria-hidden="true">•</span><input id="size" type="range" min="2" max="60" value="12" aria-label="גודל"><span aria-hidden="true" style="font-size:26px">●</span></div></div>
 <div class="panel"><p class="lbl">צורות (לוחצים ואז מציירים על הלוח, הצורה אומרת את שמה)</p><div class="row shapes" id="shapes" role="group" aria-label="צורות"></div></div>
 <div class="panel"><p class="lbl">מדבקות</p><div class="row stick" id="stick" role="group" aria-label="מדבקות"></div></div>
-<div class="panel actions"><div class="row"><button id="undo">↩️ ביטול</button><button id="clear" class="danger">🗑️ דף חדש</button><button id="save">💾 שמירת תמונה</button><button id="mute" aria-pressed="false">🔊 קול</button></div></div>
+<div class="panel actions"><div class="row"><button id="undo">ביטול</button><button id="clear" class="danger">דף חדש</button><button id="save">שמירת תמונה</button><button id="mute" aria-pressed="false">קול</button></div></div>
 </main>
 <script>
 'use strict';
 const $=id=>document.getElementById(id);
 const cv=$('cv'),ctx=cv.getContext('2d',{willReadFrequently:true});
 const COLORS=['#e53935','#fb8c00','#fdd835','#43a047','#00acc1','#1e88e5','#8e24aa','#ec407a','#795548','#222222','#ffffff','#8bc34a'];
-const TOOLS=[['brush','🖌️','מכחול'],['marker','🖍️','טוש עבה'],['rainbow','🌈','קשת'],['spray','✨','ספריי'],['fill','🪣','מילוי'],['eraser','🧽','מחק']];
+const TOOLS=[['brush','','מכחול'],['marker','','טוש עבה'],['rainbow','','קשת'],['spray','','ספריי'],['fill','','מילוי'],['eraser','','מחק']];
 const SHAPES=[['circle','⚪','עיגול'],['square','⬜','ריבוע'],['rect','▭','מלבן'],['triangle','🔺','משולש'],['star','⭐','כוכב'],['heart','❤️','לב'],['oval','🥚','אליפסה'],['diamond','🔷','מעוין']];
 const STICKERS=[['🐶','כלב'],['🐱','חתול'],['🦋','פרפר'],['🌸','פרח'],['☀️','שמש'],['🌈','קשת'],['🏠','בית'],['🚗','מכונית'],['🎈','בלון'],['🦄','חד קרן'],['🐟','דג'],['🌳','עץ']];
 let color=COLORS[5],tool='brush',shapeKind=null,sticker=null,muted=false;
@@ -62,8 +62,11 @@ function white(){ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height)}
 white();
 function mkBtn(parent,html,label,fn,cls){const b=document.createElement('button');b.innerHTML=html;b.setAttribute('aria-label',label);if(cls)b.className=cls;b.addEventListener('click',fn);parent.appendChild(b);return b}
 const colorBtns=COLORS.map(c=>{const b=mkBtn($('colors'),'',c,()=>{color=c;if(tool==='eraser'){setTool('brush')}refresh()});b.style.background=c;b.dataset.c=c;return b});
-const toolBtns={};TOOLS.forEach(([k,e,n])=>{toolBtns[k]=mkBtn($('tools'),`<span>${e}</span>${n}`,n,()=>{setTool(k);if(k==='fill')msg('לוחצים על אזור כדי לצבוע אותו');else msg('')},'tool')});
-const shapeBtns={};SHAPES.forEach(([k,e,n])=>{shapeBtns[k]=mkBtn($('shapes'),e,n,()=>{tool='shape';shapeKind=k;sticker=null;say(n);msg('צורה: '+n+'. מציירים על הלוח (אפשר לגרור כדי לשנות גודל)');refresh()})});
+const toolBtns={};TOOLS.forEach(([k,e,n])=>{toolBtns[k]=mkBtn($('tools'),n,n,()=>{setTool(k);if(k==='fill')msg('לוחצים על אזור כדי לצבוע אותו');else msg('')},'tool')});
+const shapeBtns={};SHAPES.forEach(([k,e,n])=>{shapeBtns[k]=mkBtn($('shapes'),'',n,()=>{tool='shape';shapeKind=k;sticker=null;say(n);msg('צורה: '+n+'. מציירים על הלוח (אפשר לגרור כדי לשנות גודל)');refresh()})});
+SHAPES.forEach(([k])=>{const c=document.createElement('canvas');c.width=c.height=44;const x=c.getContext('2d');const save=ctx;x.fillStyle='#8e6bff';x.strokeStyle='#342653';x.lineWidth=2;
+ const P=(kk,cx,cy,r)=>{x.beginPath();const ct=ctx;};
+ shapeIcon(x,k);shapeBtns[k].appendChild(c);});
 const stickBtns=STICKERS.map(([e,n])=>mkBtn($('stick'),e,n,()=>{tool='sticker';sticker=[e,n];shapeKind=null;say(n);msg('מדבקה: '+n+'. לוחצים על הלוח');refresh()}));
 function setTool(k){tool=k;shapeKind=null;sticker=null;refresh()}
 function refresh(){
@@ -76,19 +79,20 @@ refresh();
 function pos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height}}
 function size(){return +$('size').value}
 let drawing=false,last=null,start=null,base=null,hue=0,moved=false;
-function path(k,x,y,r,r2){
- ctx.beginPath();
+function path(k,x,y,r,r2,c){c=c||ctx;
+ c.beginPath();
  switch(k){
- case'circle':ctx.arc(x,y,r,0,7);break;
- case'square':ctx.rect(x-r,y-r,2*r,2*r);break;
- case'rect':ctx.rect(x-r*1.4,y-r*.8,r*2.8,r*1.6);break;
- case'oval':ctx.ellipse(x,y,r*1.4,r*.85,0,0,7);break;
- case'triangle':ctx.moveTo(x,y-r);ctx.lineTo(x+r*1.1,y+r*.8);ctx.lineTo(x-r*1.1,y+r*.8);ctx.closePath();break;
- case'diamond':ctx.moveTo(x,y-r*1.2);ctx.lineTo(x+r*.9,y);ctx.lineTo(x,y+r*1.2);ctx.lineTo(x-r*.9,y);ctx.closePath();break;
- case'star':for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.45:r;ctx.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr)}ctx.closePath();break;
- case'heart':ctx.moveTo(x,y+r*.9);ctx.bezierCurveTo(x-r*1.4,y+r*.1,x-r*.9,y-r*.95,x,y-r*.35);ctx.bezierCurveTo(x+r*.9,y-r*.95,x+r*1.4,y+r*.1,x,y+r*.9);ctx.closePath();break;
+ case'circle':c.arc(x,y,r,0,7);break;
+ case'square':c.rect(x-r,y-r,2*r,2*r);break;
+ case'rect':c.rect(x-r*1.4,y-r*.8,r*2.8,r*1.6);break;
+ case'oval':c.ellipse(x,y,r*1.4,r*.85,0,0,7);break;
+ case'triangle':c.moveTo(x,y-r);c.lineTo(x+r*1.1,y+r*.8);c.lineTo(x-r*1.1,y+r*.8);c.closePath();break;
+ case'diamond':c.moveTo(x,y-r*1.2);c.lineTo(x+r*.9,y);c.lineTo(x,y+r*1.2);c.lineTo(x-r*.9,y);c.closePath();break;
+ case'star':for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.45:r;c.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr)}c.closePath();break;
+ case'heart':c.moveTo(x,y+r*.9);c.bezierCurveTo(x-r*1.4,y+r*.1,x-r*.9,y-r*.95,x,y-r*.35);c.bezierCurveTo(x+r*.9,y-r*.95,x+r*1.4,y+r*.1,x,y+r*.9);c.closePath();break;
  }
 }
+function shapeIcon(x,k){const sv=ctx;path(k,22,22,15,0,x);x.fillStyle='#8e6bff';x.fill();x.lineWidth=2.5;x.strokeStyle='#342653';x.lineJoin='round';x.stroke()}
 function drawShape(k,x,y,r){path(k,x,y,r);ctx.fillStyle=color;ctx.fill();ctx.lineWidth=Math.max(3,r/14);ctx.strokeStyle='#342653';ctx.lineJoin='round';ctx.stroke()}
 function drawSticker(x,y,r){ctx.font=`${r*2}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#000';ctx.fillText(sticker[0],x,y)}
 function stroke(a,b){
@@ -157,7 +161,7 @@ function end(e){
 cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
 $('undo').onclick=()=>{const h=hist.pop();if(h){ctx.putImageData(h,0,0);msg('')}else msg('אין מה לבטל')};
 $('clear').onclick=()=>{if(confirm('להתחיל דף חדש? הציור הנוכחי יימחק.')){snap();white();msg('דף חדש')}};
-$('mute').onclick=function(){muted=!muted;this.textContent=muted?'🔇 ללא קול':'🔊 קול';this.setAttribute('aria-pressed',muted)};
+$('mute').onclick=function(){muted=!muted;this.textContent=muted?'🔇 ללא קול':'קול';this.setAttribute('aria-pressed',muted)};
 $('save').onclick=()=>{
  cv.toBlob(b=>{if(!b){msg('לא הצלחתי לשמור');return}
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ציור.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);msg('התמונה נשמרה במכשיר')},'image/png')};
