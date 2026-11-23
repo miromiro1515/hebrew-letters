@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>סלפי מצחיק</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+.lp-back-bar{direction:ltr;display:flex;justify-content:flex-start;padding:10px 12px 0}
+.lp-back{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:8px 18px 8px 12px;border-radius:999px;background:#fff;color:#5b3fd0;border:2px solid #d9d0fb;box-shadow:0 3px 10px rgba(91,63,208,.18);font:700 1.05rem/1.2 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;text-decoration:none;-webkit-tap-highlight-color:transparent}
+.lp-back:active{transform:scale(.97)}
+.lp-back-arrow{font-size:1.9rem;line-height:1;font-weight:700}
+.lp-back-text{direction:rtl}
+</style>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:Arial,sans-serif;color:#342653;padding:0 10px 18px;min-height:100dvh}
+main{max-width:560px;margin:0 auto}
+h1{font-size:24px;margin:4px 0 8px;text-align:center}
+button{font:inherit;touch-action:manipulation;cursor:pointer;border:2px solid transparent;border-radius:14px;background:#fff;color:#342653;min-height:48px;min-width:48px;padding:6px 12px;font-weight:bold;box-shadow:0 2px 6px #3426531a}
+button:focus-visible{outline:3px solid #8e6bff;outline-offset:2px}
+button.on{border-color:#8e6bff;background:#efe7ff;box-shadow:0 0 0 3px #8e6bff55}
+.card{background:#ffffffe6;border-radius:20px;padding:14px;margin:8px 0;text-align:center;box-shadow:0 4px 16px #8e6bff26}
+.card p{line-height:1.6;margin:6px 0;font-size:17px}
+.big{min-height:60px;font-size:20px;padding:10px 26px;border-radius:999px}
+.stage{position:relative;background:#222;border-radius:18px;overflow:hidden;border:3px solid #8e6bff;box-shadow:0 6px 20px #8e6bff33;aspect-ratio:3/4;max-height:72dvh;margin:0 auto;touch-action:none}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+.row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0}
+.lbl{font-size:13px;color:#6a5d86;font-weight:bold;margin:6px 0 0;text-align:center}
+.row button{font-size:26px;line-height:1.1;padding:4px 8px}
+.row button small{display:block;font-size:12px}
+#status{min-height:22px;text-align:center;font-size:15px;font-weight:bold;color:#2a7a5a;margin:4px 0}
+.note{font-size:14px;color:#6a5d86}
+[hidden]{display:none!important}
+</style></head><body>
+<div class="lp-back-bar"><a class="lp-back" href="learning.html" aria-label="חזרה לבחירת מקצוע"><span class="lp-back-arrow" aria-hidden="true">←</span><span class="lp-back-text">חזרה לבחירת מקצוע</span></a></div>
+<main>
+<h1>🤳 סלפי מצחיק</h1>
+<section class="card" id="intro">
+<p>שמים כובעים, משקפיים, זקן ומסכת כלבלב על הפנים!</p>
+<p class="note">המצלמה נפתחת רק אחרי הלחיצה על הכפתור ואחרי שהמכשיר מבקש אישור. התמונה נשארת במכשיר ולא נשלחת לשום מקום.</p>
+<button id="start" class="big" style="background:linear-gradient(135deg,#8e6bff,#ff5d8f);color:#fff">📷 פותחים מצלמה</button>
+<p id="err" class="note" style="color:#b3261e" role="alert"></p>
+</section>
+<section id="play" hidden>
+<div class="stage" id="stage"><video id="vid" playsinline muted autoplay></video><canvas id="cv"></canvas></div>
+<div id="status" aria-live="polite"></div>
+<p class="lbl">כובעים</p><div class="row" id="hats"></div>
+<p class="lbl">משקפיים</p><div class="row" id="glasses"></div>
+<p class="lbl">עוד</p><div class="row" id="extra"></div>
+<div class="row"><button id="flip">🔄 מצלמה אחרת</button><button id="snap">📸 צילום</button><button id="stop">⏹️ סגירת מצלמה</button></div>
+<p class="note" style="text-align:center">צילום נשמר במכשיר שלך בלבד.</p>
+</section>
+</main>
+<script type="module">
+const $=id=>document.getElementById(id);
+const vid=$('vid'),cv=$('cv'),ctx=cv.getContext('2d');
+const HATS=[['none','🚫','בלי'],['party','🥳','מסיבה'],['top','🎩','צילינדר'],['crown','👑','כתר'],['cap','🧢','כובע'],['grad','🎓','בוגר'],['cowboy','🤠','בוקר']];
+const GLASSES=[['none','🚫','בלי'],['round','👓','עגולים'],['sun','🕶️','שמש'],['heart','😍','לבבות'],['star','🤩','כוכבים']];
+const EXTRA=[['beard','🧔','זקן'],['dog','🐶','כלבלב'],['mustache','🥸','שפם']];
+const sel={hat:'party',glasses:'none',beard:false,dog:false,mustache:false};
+let stream=null,landmarker=null,facing='user',raf=0,lastTs=-1,face=null,smooth=null,trackState='idle';
+function mk(box,list,key,single){list.forEach(([k,e,n])=>{const b=document.createElement('button');b.innerHTML=e+'<small>'+n+'</small>';b.setAttribute('aria-label',n);b.dataset.k=k;b.addEventListener('click',()=>{if(single){sel[key]=k}else{sel[k]=!sel[k]}paint()});box.appendChild(b)})}
+mk($('hats'),HATS,'hat',true);mk($('glasses'),GLASSES,'glasses',true);mk($('extra'),EXTRA,null,false);
+function paint(){document.querySelectorAll('#hats button').forEach(b=>b.classList.toggle('on',sel.hat===b.dataset.k));document.querySelectorAll('#glasses button').forEach(b=>b.classList.toggle('on',sel.glasses===b.dataset.k));document.querySelectorAll('#extra button').forEach(b=>b.classList.toggle('on',!!sel[b.dataset.k]))}
+paint();
+const status=t=>$('status').textContent=t;
+
+async function loadTracker(){
+ if(landmarker||trackState==='failed')return;
+ trackState='loading';status('טוענים זיהוי פנים (פעם ראשונה לוקח כמה שניות)...');
+ try{
+  const base='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
+  const m=await import(base+'/vision_bundle.mjs');
+  const fs=await m.FilesetResolver.forVisionTasks(base+'/wasm');
+  const opts=d=>({baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',delegate:d},runningMode:'VIDEO',numFaces:1});
+  try{landmarker=await m.FaceLandmarker.createFromOptions(fs,opts('GPU'))}catch(e){landmarker=await m.FaceLandmarker.createFromOptions(fs,opts('CPU'))}
+  trackState='ready';status('');
+ }catch(e){trackState='failed';status('הזיהוי האוטומטי לא נטען. אפשר לגרור את הקישוטים עם האצבע, ולשנות גודל עם שתי אצבעות.')}
+}
+/* manual fallback: one placement for everything, moved by finger */
+const manual={x:.5,y:.45,s:.45,r:0};
+let ptrs=new Map(),pinch0=null;
+cv.addEventListener('pointerdown',e=>{if(face)return;ptrs.set(e.pointerId,[e.clientX,e.clientY]);try{cv.setPointerCapture(e.pointerId)}catch(_){}pinch0=null});
+cv.addEventListener('pointermove',e=>{if(face||!ptrs.has(e.pointerId))return;const r=cv.getBoundingClientRect();const o=ptrs.get(e.pointerId);ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+ if(ptrs.size===1){manual.x+=(e.clientX-o[0])/r.width;manual.y+=(e.clientY-o[1])/r.height}
+ else if(ptrs.size>=2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);if(pinch0)manual.s=Math.max(.15,Math.min(.9,manual.s*d/pinch0));pinch0=d}});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,e=>{ptrs.delete(e.pointerId);pinch0=null}));
+
+function lm(p,w,h){return[(1-p.x)*w,p.y*h]} /* mirrored to match the mirrored video */
+function computeFace(res,w,h){
+ const L=res.faceLandmarks&&res.faceLandmarks[0];if(!L)return null;
+ /* video is shown with object-fit:cover, so map video coords to canvas coords */
+ const vw=vid.videoWidth,vh=vid.videoHeight,sc=Math.max(w/vw,h/vh),ox=(w-vw*sc)/2,oy=(h-vh*sc)/2;
+ const mir=facing==='user';const P=i=>({x:mir?w-(L[i].x*vw*sc+ox):L[i].x*vw*sc+ox,y:L[i].y*vh*sc+oy});
+ const eL=P(263),eR=P(33),top=P(10),chin=P(152),cl=P(454),cr=P(234),nose=P(1),mouth=P(13);
+ const eyeC={x:(eL.x+eR.x)/2,y:(eL.y+eR.y)/2};
+ const [ea,eb]=eL.x<eR.x?[eL,eR]:[eR,eL];const roll=Math.atan2(eb.y-ea.y,eb.x-ea.x);
+ const fw=Math.hypot(cl.x-cr.x,cl.y-cr.y),fh=Math.hypot(top.x-chin.x,top.y-chin.y);
+ return{eyeC,roll,fw,fh,top,chin,nose,mouth,eyeD:Math.hypot(eL.x-eR.x,eL.y-eR.y)};
+}
+function lerp(a,b,t){return a+(b-a)*t}
+function smoothFace(f){
+ if(!f){smooth=null;return null}
+ if(!smooth){smooth={...f};return smooth}
+ const t=.55;for(const k of ['fw','fh','roll','eyeD']){smooth[k]=lerp(smooth[k],f[k],t)}
+ for(const k of ['eyeC','top','chin','nose','mouth']){smooth[k]={x:lerp(smooth[k].x,f[k].x,t),y:lerp(smooth[k].y,f[k].y,t)}}
+ return smooth;
+}
+function manualFace(w,h){
+ const fw=manual.s*w,fh=fw*1.3,cx=manual.x*w,cy=manual.y*h;
+ return{eyeC:{x:cx,y:cy-fh*.12},roll:0,fw,fh,top:{x:cx,y:cy-fh/2},chin:{x:cx,y:cy+fh/2},nose:{x:cx,y:cy+fh*.05},mouth:{x:cx,y:cy+fh*.25},eyeD:fw*.5};
+}
+function rot(f,x,y,fn){ctx.save();ctx.translate(x,y);ctx.rotate(f.roll);fn();ctx.restore()}
+function emoji(t,size){ctx.font=size+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t,0,0)}
+function drawHat(f){
+ const k=sel.hat;if(k==='none')return;
+ const E={party:'🥳',top:'🎩',crown:'👑',cap:'🧢',grad:'🎓',cowboy:'🤠'};
+ const sz=f.fw*1.15;
+ const up={x:Math.sin(f.roll)*1,y:-Math.cos(f.roll)};
+ /* sit on the forehead, slightly up from the top landmark */
+ const x=f.top.x+up.x*f.fh*.12,y=f.top.y+up.y*f.fh*.12;
+ rot(f,x,y,()=>{
+  if(k==='party'){ /* drawn party hat so it is not a face */
+   ctx.translate(0,-sz*.38);const w=sz*.8,h=sz*.95;
+   ctx.beginPath();ctx.moveTo(0,-h/2);ctx.lineTo(w/2,h/2);ctx.lineTo(-w/2,h/2);ctx.closePath();
+   const g=ctx.createLinearGradient(-w/2,0,w/2,0);g.addColorStop(0,'#ff5d8f');g.addColorStop(.5,'#ffd23f');g.addColorStop(1,'#38b6ff');ctx.fillStyle=g;ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='#fff';ctx.stroke();
+   ctx.fillStyle='#fff';[[-.12,.1],[.1,-.1],[0,.28],[-.2,.35],[.2,.3]].forEach(([a,b])=>{ctx.beginPath();ctx.arc(a*w,b*h,w*.05,0,7);ctx.fill()});
+   ctx.beginPath();ctx.arc(0,-h/2,w*.1,0,7);ctx.fillStyle='#ff5d8f';ctx.fill();
+  }else if(k==='top'){
+   ctx.translate(0,-sz*.35);const w=sz*.8,h=sz*.8;
+   ctx.fillStyle='#222';ctx.fillRect(-w*.32,-h*.55,w*.64,h*.8);ctx.beginPath();ctx.ellipse(0,h*.25,w*.55,h*.1,0,0,7);ctx.fill();
+   ctx.fillStyle='#e53935';ctx.fillRect(-w*.32,-h*.02,w*.64,h*.14);
+  }else if(k==='crown'){
+   ctx.translate(0,-sz*.2);const w=sz*.8,h=sz*.5;
+   ctx.beginPath();ctx.moveTo(-w/2,h/2);ctx.lineTo(-w/2,-h/3);ctx.lineTo(-w/4,h/12);ctx.lineTo(0,-h/2);ctx.lineTo(w/4,h/12);ctx.lineTo(w/2,-h/3);ctx.lineTo(w/2,h/2);ctx.closePath();
+   ctx.fillStyle='#ffc107';ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='#b8860b';ctx.stroke();
+   [[-.3],[0],[.3]].forEach(([a])=>{ctx.beginPath();ctx.arc(a*w,h*.2,w*.05,0,7);ctx.fillStyle=['#e53935','#1e88e5','#43a047'][Math.round(a*3.3)+1];ctx.fill()});
+  }else{ctx.translate(0,-sz*.28);emoji(E[k],sz)}
+ });
+}
+function drawGlasses(f){
+ const k=sel.glasses;if(k==='none')return;
+ const sz=f.eyeD*2.3;
+ rot(f,f.eyeC.x,f.eyeC.y,()=>{
+  if(k==='round'){ctx.lineWidth=Math.max(4,f.eyeD*.09);ctx.strokeStyle='#222';const r=f.eyeD*.36;[-1,1].forEach(s=>{ctx.beginPath();ctx.arc(s*f.eyeD/2,0,r,0,7);ctx.fillStyle='#ffffff30';ctx.fill();ctx.stroke()});ctx.beginPath();ctx.moveTo(-f.eyeD/2+r,0);ctx.lineTo(f.eyeD/2-r,0);ctx.stroke()}
+  else if(k==='sun'){ctx.fillStyle='#111';const r=f.eyeD*.38;[-1,1].forEach(s=>{ctx.beginPath();ctx.roundRect(s*f.eyeD/2-r,-r*.8,r*2,r*1.6,r*.5);ctx.fill()});ctx.lineWidth=f.eyeD*.07;ctx.strokeStyle='#111';ctx.beginPath();ctx.moveTo(-f.eyeD/2+r,-r*.2);ctx.lineTo(f.eyeD/2-r,-r*.2);ctx.stroke()}
+  else if(k==='heart'){ctx.fillStyle='#e91e63';[-1,1].forEach(s=>{const r=f.eyeD*.42,x=s*f.eyeD/2;ctx.beginPath();ctx.moveTo(x,r*.8);ctx.bezierCurveTo(x-r*1.4,r*.1,x-r*.9,-r*.95,x,-r*.35);ctx.bezierCurveTo(x+r*.9,-r*.95,x+r*1.4,r*.1,x,r*.8);ctx.fill()})}
+  else if(k==='star'){ctx.fillStyle='#ffc107';ctx.strokeStyle='#b8860b';ctx.lineWidth=3;[-1,1].forEach(s=>{const r=f.eyeD*.5,x=s*f.eyeD/2;ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*.45:r;ctx.lineTo(x+Math.cos(a)*rr,Math.sin(a)*rr)}ctx.closePath();ctx.fill();ctx.stroke()})}
+ });
+}
+function drawBeard(f){
+ rot(f,f.chin.x,f.chin.y,()=>{const w=f.fw*.95,h=f.fh*.5;
+  ctx.beginPath();ctx.moveTo(-w/2,-h*.75);ctx.bezierCurveTo(-w*.6,h*.3,-w*.25,h*.9,0,h*.95);ctx.bezierCurveTo(w*.25,h*.9,w*.6,h*.3,w/2,-h*.75);
+  ctx.bezierCurveTo(w*.3,-h*.35,w*.2,-h*.45,0,-h*.4);ctx.bezierCurveTo(-w*.2,-h*.45,-w*.3,-h*.35,-w/2,-h*.75);ctx.closePath();
+  ctx.fillStyle='#6d4c41';ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='#4e342e';ctx.stroke()});
+}
+function drawMustache(f){
+ const mx=(f.nose.x+f.mouth.x)/2,my=(f.nose.y+f.mouth.y)/2;
+ rot(f,mx,my,()=>{const w=f.fw*.5;ctx.fillStyle='#3e2723';ctx.beginPath();ctx.moveTo(0,-w*.05);ctx.bezierCurveTo(w*.15,-w*.2,w*.45,-w*.1,w*.5,w*.12);ctx.bezierCurveTo(w*.3,w*.05,w*.15,w*.08,0,w*.1);ctx.bezierCurveTo(-w*.15,w*.08,-w*.3,w*.05,-w*.5,w*.12);ctx.bezierCurveTo(-w*.45,-w*.1,-w*.15,-w*.2,0,-w*.05);ctx.fill()});
+}
+function drawDog(f){
+ /* ears on the top corners, black nose, tongue */
+ rot(f,f.top.x,f.top.y,()=>{const w=f.fw;
+  [-1,1].forEach(s=>{ctx.save();ctx.translate(s*w*.42,w*.12);ctx.rotate(s*.35);ctx.beginPath();ctx.ellipse(0,0,w*.17,w*.3,0,0,7);ctx.fillStyle='#8d5b3a';ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='#5d3a22';ctx.stroke();ctx.beginPath();ctx.ellipse(0,w*.03,w*.09,w*.2,0,0,7);ctx.fillStyle='#e8a7a0';ctx.fill();ctx.restore()})});
+ rot(f,f.nose.x,f.nose.y,()=>{const r=f.fw*.09;ctx.beginPath();ctx.ellipse(0,0,r*1.3,r,0,0,7);ctx.fillStyle='#111';ctx.fill();ctx.beginPath();ctx.ellipse(-r*.4,-r*.35,r*.35,r*.2,0,0,7);ctx.fillStyle='#fff8';ctx.fill()});
+ rot(f,f.mouth.x,f.mouth.y,()=>{const r=f.fw*.08;ctx.beginPath();ctx.ellipse(0,r*1.1,r*.9,r*1.4,0,0,7);ctx.fillStyle='#ff6f91';ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#c2185b';ctx.stroke();ctx.beginPath();ctx.moveTo(0,r*.1);ctx.lineTo(0,r*1.9);ctx.stroke()});
+}
+function drawAll(f){
+ if(sel.dog)drawDog(f);
+ if(sel.beard)drawBeard(f);
+ if(sel.mustache)drawMustache(f);
+ drawGlasses(f);drawHat(f);
+}
+function resize(){const r=cv.getBoundingClientRect(),d=Math.min(2,window.devicePixelRatio||1);const w=Math.round(r.width*d),h=Math.round(r.height*d);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h}}
+function loop(){
+ raf=requestAnimationFrame(loop);
+ if(!stream||vid.readyState<2)return;
+ resize();const w=cv.width,h=cv.height;ctx.clearRect(0,0,w,h);
+ let f=null;
+ if(landmarker&&vid.currentTime!==lastTs){
+  lastTs=vid.currentTime;
+  try{const res=landmarker.detectForVideo(vid,performance.now());face=computeFace(res,w,h)}catch(e){face=null}
+ }
+ if(landmarker){f=smoothFace(face);if(!f)status('מחפשים פנים... מסתכלים למצלמה');else status('')}
+ else if(trackState==='failed'){f=manualFace(w,h)}
+ if(f)drawAll(f);
+}
+async function openCam(){
+ $('err').textContent='';
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){$('err').textContent='הדפדפן הזה לא מאפשר מצלמה. אפשר לנסות ב-Safari או ב-Chrome עדכניים.';return}
+ try{
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:facing,width:{ideal:640},height:{ideal:480}},audio:false});
+  vid.srcObject=stream;await vid.play().catch(()=>{});
+  vid.style.transform=facing==='user'?'scaleX(-1)':'scaleX(1)';
+  $('intro').hidden=true;$('play').hidden=false;smooth=null;face=null;
+  loadTracker();if(!raf)loop();
+ }catch(e){
+  const n=e&&e.name;
+  $('err').textContent=(n==='NotAllowedError'||n==='SecurityError')?'לא אישרנו גישה למצלמה. אפשר לאשר בהגדרות הדפדפן ולנסות שוב.':(n==='NotFoundError'?'לא נמצאה מצלמה במכשיר.':'לא הצלחנו לפתוח את המצלמה.');
+ }
+}
+function closeCam(){
+ if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;vid.srcObject=null;cancelAnimationFrame(raf);raf=0;
+ $('play').hidden=true;$('intro').hidden=false;
+}
+$('start').addEventListener('click',openCam);
+$('stop').addEventListener('click',closeCam);
+$('flip').addEventListener('click',()=>{facing=facing==='user'?'environment':'user';openCam()});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream)closeCam()});
+window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop())});
+$('snap').addEventListener('click',()=>{
+ const w=cv.width,h=cv.height,o=document.createElement('canvas');o.width=w;o.height=h;const c=o.getContext('2d');
+ const vw=vid.videoWidth,vh=vid.videoHeight,sc=Math.max(w/vw,h/vh);c.save();if(facing==='user'){c.translate(w,0);c.scale(-1,1)}c.drawImage(vid,(w-vw*sc)/2,(h-vh*sc)/2,vw*sc,vh*sc);c.restore();c.drawImage(cv,0,0);
+ o.toBlob(b=>{if(!b)return;const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='סלפי.png';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);status('התמונה נשמרה במכשיר')},'image/png');
+});
+</script></body></html>
